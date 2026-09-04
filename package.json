@@ -1,0 +1,16 @@
+{
+  "name": "gakuran-class-war-core",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/demo.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.3.0",
+    "discord.js": "^14.27.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
