@@ -170,6 +170,10 @@ const commands = [
         ),
 
     new SlashCommandBuilder()
+        .setName('sync-ranks')
+        .setDescription('ซิงค์ Role ตามคะแนนผู้เล่นทั้งหมด (Admin)'),
+
+    new SlashCommandBuilder()
         .setName('match')
         .setDescription('ดูข้อมูล Match')
         .addStringOption(o =>
@@ -255,7 +259,64 @@ client.on('interactionCreate', async interaction => {
     try {
         const cmd = interaction.commandName;
 
-        if (cmd === 'register') { console.log('DEBUG CLASS0F:', typeof scoreService.class0f);
+        if (cmd === 'sync-ranks') {
+            if (!isAdmin(interaction)) {
+                return interaction.reply({
+                    content: 'คำสั่งนี้ใช้ได้เฉพาะผู้ดูแลเซิร์ฟเวอร์เท่านั้น',
+                    ephemeral: true
+                });
+            }
+
+            await interaction.deferReply({ ephemeral: true });
+
+            const players = challenge.getAllPlayers();
+
+            let synced = 0;
+            let failed = 0;
+            let notInServer = 0;
+            let bots = 0;
+
+            for (const player of players) {
+                try {
+                    const member = await interaction.guild.members.fetch(player.discord_id);
+
+                    if (!member) {
+                        notInServer++;
+                        continue;
+                    }
+
+                    if (member.user.bot) {
+                        bots++;
+                        continue;
+                    }
+
+                    const result = await discordRole.syncRole(member, player.score);
+
+                    if (result.success) {
+                        synced++;
+                    } else {
+                        failed++;
+                    }
+                } catch (error) {
+                    failed++;
+                    console.error(
+                        `Sync rank skipped for ${player.discord_id}:`,
+                        error.message
+                    );
+                }
+            }
+
+            return interaction.editReply(
+                `✅ Sync Rank สำเร็จ\n` +
+                `👥 ผู้เล่นในฐานข้อมูล: ${players.length}\n` +
+                `🎖️ อัปเดต Role: ${synced}\n` +
+                `👤 ไม่อยู่ในเซิร์ฟเวอร์: ${notInServer}\n` +
+                `🤖 Bot: ${bots}\n` +
+                `❌ ล้มเหลว: ${failed}`
+            );
+        }
+
+        if (cmd === 'register') {
 
 const player = challenge.ensurePlayer({ discordId: interaction.user.id, displayName: interaction.user.username });
 
@@ -371,6 +432,9 @@ return interaction.reply({
               ephemeral: true
             });
           }
+
+          const member = await interaction.guild.members.fetch(interaction.user.id);
+          await discordRole.syncRole(member, result.after);
 
           const embed = new EmbedBuilder()
             .setColor('#e8a0bf')

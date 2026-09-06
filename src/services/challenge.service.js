@@ -3,6 +3,7 @@ const config = require('../config');
 const score = require('./score.service');
 
 function getPlayer(discordId) { return db.prepare('SELECT * FROM players WHERE discord_id=?').get(discordId); }
+function getAllPlayers() { return db.prepare('SELECT * FROM players ORDER BY id ASC').all(); }
 function ensurePlayer({discordId,displayName}) {
   let p=getPlayer(discordId); if(p) return p;
   const last=db.prepare('SELECT player_id FROM players ORDER BY id DESC LIMIT 1').get();
@@ -168,4 +169,4 @@ function decline(code,userId,reason='') {
   db.prepare("UPDATE challenges SET status='DECLINED',decline_reason=? WHERE id=?").run(reason,c.id);
   return db.prepare('SELECT * FROM challenges WHERE id=?').get(c.id);
 }
-module.exports={getPlayer,ensurePlayer,dayKey,ensureDaily,activeMatch,pairCooldownSeconds,pairScoredToday,rankedStartedToday,protectedPlayer,createChallenge,acceptChallenge,decline,expire};
+module.exports={getPlayer,getAllPlayers,ensurePlayer,dayKey,ensureDaily,activeMatch,pairCooldownSeconds,pairScoredToday,rankedStartedToday,protectedPlayer,createChallenge,acceptChallenge,decline,expire};
