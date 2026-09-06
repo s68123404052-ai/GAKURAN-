@@ -267,7 +267,7 @@ return interaction.reply({
         }
 
         if (cmd === 'leaderboard') {
-            const db = require('../database');
+            const { db } = require('../database');
             const rows = db.prepare(`
                 SELECT discord_id, display_name, score
                 FROM players
@@ -288,7 +288,7 @@ return interaction.reply({
 
         if (cmd === 'history') {
             const id = getUserId(interaction);
-            const db = require('../database');
+            const { db } = require('../database');
 
             const rows = db.prepare(`
                 SELECT match_code, player_a_id, player_b_id, status,
@@ -488,7 +488,7 @@ if (cmd === 'decline') {
                 });
             }
 
-            const db = require('../database');
+            const { db } = require('../database');
 
             const rows = db.prepare(`
                 SELECT
