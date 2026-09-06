@@ -3,7 +3,8 @@ const {
     GatewayIntentBits,
     REST,
     Routes,
-    SlashCommandBuilder
+    SlashCommandBuilder,
+    EmbedBuilder
 } = require('discord.js');
 
 const challenge = require('../services/challenge.service');
@@ -261,8 +262,45 @@ return interaction.reply({
                 });
             }
 
+            const rank = scoreService.class0f(player.score);
+            const avatar = interaction.user.displayAvatarURL({ extension: 'png', size: 256 });
+            const serverLogo = interaction.guild?.iconURL({ extension: 'png', size: 256 });
+
+            const embed = new EmbedBuilder()
+                .setTitle('🏫 GAKURAN ACADEMY')
+                .setDescription('**STUDENT ID CARD**')
+                .setThumbnail(serverLogo || client.user.displayAvatarURL())
+                .setImage(avatar)
+                .addFields(
+                    {
+                        name: '👤 STUDENT',
+                        value: `**${player.display_name || interaction.user.username}**`
+                    },
+                    {
+                        name: '🪪 DISCORD ID',
+                        value: `\`${player.discord_id}\``
+                    },
+                    {
+                        name: '⭐ SCORE',
+                        value: `**${player.score}**`,
+                        inline: true
+                    },
+                    {
+                        name: '🏅 CLASS',
+                        value: `**${rank}**`,
+                        inline: true
+                    },
+                    {
+                        name: '🟢 STATUS',
+                        value: '**ACTIVE**',
+                        inline: true
+                    }
+                )
+                .setFooter({ text: 'GAKURAN ACADEMY • STUDENT RECORD' })
+                .setTimestamp();
+
             return interaction.reply({
-                content: formatPlayer(player)
+                embeds: [embed]
             });
         }
 
