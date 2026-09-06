@@ -778,31 +778,95 @@ return interaction.reply({
 
         if (cmd === 'history') {
             const id = getUserId(interaction);
+            const player = challenge.getPlayer(id);
+
+            if (!player) {
+                return interaction.reply({
+                    content: 'ยังไม่ได้ลงทะเบียน',
+                    ephemeral: true
+                });
+            }
 
             const rows = db.prepare(`
-                SELECT match_code, player_a_id, player_b_id, status,
-                       result, winner_id, loser_id, created_at
-                FROM matches
-                WHERE player_a_id=? OR player_b_id=?
-                ORDER BY id DESC
+                SELECT
+                    m.match_code,
+                    m.player_a_id,
+                    m.player_b_id,
+                    m.status,
+                    m.result,
+                    m.winner_id,
+                    m.loser_id,
+                    m.score_a_before,
+                    m.score_b_before,
+                    m.winner_change,
+                    m.loser_change,
+                    m.created_at
+                FROM matches m
+                WHERE m.player_a_id=? OR m.player_b_id=?
+                ORDER BY m.id DESC
                 LIMIT 10
             `).all(id, id);
 
             if (!rows.length) {
-                return interaction.reply('ยังไม่มีประวัติการแข่งขัน');
+                return interaction.reply({
+                    content: '📭 ยังไม่มีประวัติการแข่งขัน',
+                    ephemeral: true
+                });
             }
+
+            const getName = (discordId) => {
+                const p = challenge.getPlayer(discordId);
+                return p?.display_name || discordId;
+            };
 
             const embed = new EmbedBuilder()
                 .setColor('#e8a0bf')
                 .setAuthor({ name: 'GAKURAN ACADEMY' })
                 .setTitle('📜 MATCH HISTORY')
-                .setDescription('RECENT MATCHES • 試合履歴')
+                .setDescription(
+                    `**${player.display_name || player.discord_id}**\n` +
+                    'RECENT MATCHES • 試合履歴'
+                )
                 .addFields(
-                    rows.map((m, i) => ({
-                        name: `#${i + 1}  MATCH ${m.match_code}`,
-                        value: `Status: **${m.status}** • Result: **${m.result || '-'}**`,
-                        inline: false
-                    }))
+                    rows.map((m, i) => {
+                        const opponentId =
+                            m.player_a_id === id
+                                ? m.player_b_id
+                                : m.player_a_id;
+
+                        let resultText = m.result || '-';
+
+                        if (m.status === 'VERIFIED') {
+                            if (m.result === 'DRAW') {
+                                resultText = 'DRAW';
+                            } else if (m.winner_id === id) {
+                                resultText = 'WIN';
+                            } else if (m.loser_id === id) {
+                                resultText = 'LOSS';
+                            }
+                        }
+
+                        let scoreText = 'Score change: -';
+
+                        if (m.status === 'VERIFIED' && m.winner_id && m.loser_id) {
+                            const change =
+                                m.winner_id === id
+                                    ? m.winner_change
+                                    : m.loser_change;
+
+                            scoreText =
+                                `Score change: **${change > 0 ? '+' : ''}${change}**`;
+                        }
+
+                        return {
+                            name: `#${i + 1} • MATCH ${m.match_code}`,
+                            value:
+                                `⚔️ Opponent: **${getName(opponentId)}**\n` +
+                                `📌 Status: **${m.status}** • Result: **${resultText}**\n` +
+                                `📈 ${scoreText}`,
+                            inline: false
+                        };
+                    })
                 )
                 .setFooter({
                     text: 'GAKURAN ACADEMY • OFFICIAL MATCH RECORD'
