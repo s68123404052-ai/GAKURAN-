@@ -203,11 +203,15 @@ function applyScore({
           losing_streak = 0,
           comeback_pending = CASE WHEN ? = 'COMEBACK' THEN 0 ELSE comeback_pending END,
           comeback_loss_ids = CASE WHEN ? = 'COMEBACK' THEN '[]' ELSE comeback_loss_ids END,
+          revenge_opponent_id = CASE WHEN ? = 'REVENGE' THEN NULL ELSE revenge_opponent_id END,
+          revenge_expires_at = CASE WHEN ? = 'REVENGE' THEN NULL ELSE revenge_expires_at END,
           updated_at = ?
       WHERE discord_id = ?
     `).run(
       winnerAfter,
       winnerStreak,
+      bonusType || null,
+      bonusType || null,
       bonusType || null,
       bonusType || null,
       timestamp,
@@ -223,6 +227,8 @@ function applyScore({
           losing_streak = ?,
           comeback_pending = ?,
           comeback_loss_ids = ?,
+          revenge_opponent_id = ?,
+          revenge_expires_at = ?,
           fail_until = ?,
           rest_until = ?,
           updated_at = ?
@@ -232,6 +238,8 @@ function applyScore({
       loserStreak,
       comebackPending,
       JSON.stringify(comebackLossIds),
+      winner.discord_id,
+      timestamp + 86400,
       failUntil,
       restUntil,
       timestamp,

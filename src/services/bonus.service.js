@@ -2,7 +2,7 @@ const { db, now } = require('../database');
 const config = require('../config');
 const challenge = require('./challenge.service');
 
-const PRIORITY = Object.freeze({EVENT:1,BOUNTY:2,WIN_STREAK:3,COMEBACK:4,REVENGE:5,RIVAL:6,PERFECT_DAY:7,HOT_MATCH:8,DAILY:9,LAST_CHANCE:10});
+const PRIORITY = Object.freeze({EVENT:1,BOUNTY:5,WIN_STREAK:3,COMEBACK:4,REVENGE:2,RIVAL:6,PERFECT_DAY:7,HOT_MATCH:8,DAILY:9,LAST_CHANCE:10});
 function player(id){return challenge.getPlayer(id);}
 function eligibleBounty(m,winner,loser){
   const diff=Math.abs(m.score_a_before-m.score_b_before);
