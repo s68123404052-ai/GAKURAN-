@@ -12,6 +12,7 @@ const match = require('../services/match.service');
 const scoreService = require('../services/score.service');
 const bonus = require('../services/bonus.service');
 const discordRole = require('../services/discord-role.service');
+const rewardCode = require('../services/reward-code.service');
 const { db } = require('../database');
 const TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID || '1545387353143640176';
@@ -174,6 +175,55 @@ const commands = [
         .setDescription('ซิงค์ Role ตามคะแนนผู้เล่นทั้งหมด (Admin)'),
 
     new SlashCommandBuilder()
+        .setName('create-code')
+        .setDescription('สร้าง Code แจกคะแนน (Admin)')
+        .addStringOption(o =>
+            o.setName('code')
+                .setDescription('Code เช่น GAKURAN100')
+                .setRequired(true)
+        )
+        .addIntegerOption(o =>
+            o.setName('amount')
+                .setDescription('จำนวนคะแนน')
+                .setMinValue(1)
+                .setRequired(true)
+        )
+        .addIntegerOption(o =>
+            o.setName('max_uses')
+                .setDescription('จำนวนครั้งที่ใช้ได้')
+                .setMinValue(1)
+                .setRequired(true)
+        )
+        .addIntegerOption(o =>
+            o.setName('expires_minutes')
+                .setDescription('หมดอายุในกี่นาที (ไม่ใส่ = ไม่มีวันหมดอายุ)')
+                .setMinValue(1)
+                .setRequired(false)
+        ),
+
+    new SlashCommandBuilder()
+        .setName('redeem-code')
+        .setDescription('ใช้ Code รับคะแนน')
+        .addStringOption(o =>
+            o.setName('code')
+                .setDescription('Reward Code')
+                .setRequired(true)
+        ),
+
+    new SlashCommandBuilder()
+        .setName('codes')
+        .setDescription('ดู Reward Codes ทั้งหมด (Admin)'),
+
+    new SlashCommandBuilder()
+        .setName('disable-code')
+        .setDescription('ปิด Reward Code (Admin)')
+        .addStringOption(o =>
+            o.setName('code')
+                .setDescription('Reward Code')
+                .setRequired(true)
+        ),
+
+    new SlashCommandBuilder()
         .setName('match')
         .setDescription('ดูข้อมูล Match')
         .addStringOption(o =>
@@ -314,6 +364,190 @@ client.on('interactionCreate', async interaction => {
                 `🤖 Bot: ${bots}\n` +
                 `❌ ล้มเหลว: ${failed}`
             );
+        }
+
+        if (cmd === 'create-code') {
+            if (!isAdmin(interaction)) {
+                return interaction.reply({
+                    content: 'คำสั่งนี้ใช้ได้เฉพาะผู้ดูแลเซิร์ฟเวอร์เท่านั้น',
+                    ephemeral: true
+                });
+            }
+
+            const code = interaction.options.getString('code', true);
+            const amount = interaction.options.getInteger('amount', true);
+            const maxUses = interaction.options.getInteger('max_uses', true);
+            const expiresMinutes = interaction.options.getInteger('expires_minutes');
+
+            const expiresAt = expiresMinutes
+                ? Math.floor(Date.now() / 1000) + (expiresMinutes * 60)
+                : null;
+
+            try {
+                const result = rewardCode.createCode({
+                    code,
+                    amount,
+                    maxUses,
+                    expiresAt,
+                    createdBy: interaction.user.id
+                });
+
+                const expiryText = result.expires_at
+                    ? `<t:${result.expires_at}:R>`
+                    : 'ไม่มีวันหมดอายุ';
+
+                return interaction.reply({
+                    content:
+                        `✅ สร้าง Reward Code สำเร็จ\n` +
+                        `🎟️ Code: \`${result.code}\`\n` +
+                        `💰 รางวัล: +${result.amount} คะแนน\n` +
+                        `👥 ใช้ได้: ${result.max_uses} ครั้ง\n` +
+                        `⏳ หมดอายุ: ${expiryText}`,
+                    ephemeral: true
+                });
+            } catch (error) {
+                const messages = {
+                    INVALID_CODE: 'Code ต้องเป็น A-Z, 0-9, _ หรือ - และยาว 3-32 ตัวอักษร',
+                    INVALID_AMOUNT: 'จำนวนคะแนนไม่ถูกต้อง',
+                    INVALID_MAX_USES: 'จำนวนครั้งที่ใช้ไม่ถูกต้อง',
+                    INVALID_EXPIRES_AT: 'เวลาหมดอายุไม่ถูกต้อง',
+                    CODE_ALREADY_EXISTS: 'Code นี้มีอยู่แล้ว'
+                };
+
+                return interaction.reply({
+                    content: `❌ ${messages[error.message] || 'เกิดข้อผิดพลาดในการสร้าง Code'}`,
+                    ephemeral: true
+                });
+            }
+        }
+
+        if (cmd === 'redeem-code') {
+            const code = interaction.options.getString('code', true);
+
+            try {
+                const result = rewardCode.redeemCode({
+                    code,
+                    playerId: interaction.user.id
+                });
+
+                let roleWarning = '';
+
+                try {
+                    const member = await interaction.guild.members.fetch(interaction.user.id);
+                    await discordRole.syncRole(member, result.after);
+                } catch (error) {
+                    console.error(
+                        `Reward Code role sync failed for ${interaction.user.id}:`,
+                        error.message
+                    );
+                    roleWarning = '\n⚠️ ไม่สามารถอัปเดต Role อัตโนมัติได้';
+                }
+
+                const rank = scoreService.class0f(result.after);
+
+                return interaction.reply({
+                    content:
+                        `✅ ใช้ Reward Code สำเร็จ\n` +
+                        `🎟️ Code: \`${result.code}\`\n` +
+                        `💰 ได้รับ: +${result.amount} คะแนน\n` +
+                        `📊 คะแนน: ${result.before} → ${result.after}\n` +
+                        `🏅 ชนชั้น: ${rank}` +
+                        roleWarning
+                });
+            } catch (error) {
+                const messages = {
+                    CODE_NOT_FOUND: 'ไม่พบ Reward Code นี้',
+                    CODE_DISABLED: 'Code นี้ถูกปิดใช้งานแล้ว',
+                    CODE_EXPIRED: 'Code นี้หมดอายุแล้ว',
+                    CODE_LIMIT_REACHED: 'Code นี้ถูกใช้ครบจำนวนแล้ว',
+                    PLAYER_NOT_FOUND: 'คุณยังไม่ได้ลงทะเบียนผู้เล่น',
+                    CODE_ALREADY_USED: 'คุณใช้ Code นี้ไปแล้ว'
+                };
+
+                return interaction.reply({
+                    content: `❌ ${messages[error.message] || 'เกิดข้อผิดพลาดในการใช้ Code'}`,
+                    ephemeral: true
+                });
+            }
+        }
+
+        if (cmd === 'codes') {
+            if (!isAdmin(interaction)) {
+                return interaction.reply({
+                    content: 'คำสั่งนี้ใช้ได้เฉพาะผู้ดูแลเซิร์ฟเวอร์เท่านั้น',
+                    ephemeral: true
+                });
+            }
+
+            const codes = rewardCode.listCodes();
+
+            if (!codes.length) {
+                return interaction.reply({
+                    content: '📭 ยังไม่มี Reward Code',
+                    ephemeral: true
+                });
+            }
+
+            const currentTime = Math.floor(Date.now() / 1000);
+
+            const lines = codes.slice(0, 25).map(item => {
+                let status = '🟢 ใช้งานได้';
+
+                if (item.disabled) {
+                    status = '🔴 ปิดใช้งาน';
+                } else if (
+                    item.expires_at !== null &&
+                    item.expires_at <= currentTime
+                ) {
+                    status = '⏰ หมดอายุ';
+                } else if (item.uses_count >= item.max_uses) {
+                    status = '⚫ ใช้ครบแล้ว';
+                }
+
+                const expiry = item.expires_at
+                    ? ` • <t:${item.expires_at}:R>`
+                    : '';
+
+                return `\`${item.code}\` • +${item.amount} • ${item.uses_count}/${item.max_uses}${expiry} • ${status}`;
+            });
+
+            return interaction.reply({
+                content:
+                    `🎟️ **Reward Codes**\n` +
+                    lines.join('\n'),
+                ephemeral: true
+            });
+        }
+
+        if (cmd === 'disable-code') {
+            if (!isAdmin(interaction)) {
+                return interaction.reply({
+                    content: 'คำสั่งนี้ใช้ได้เฉพาะผู้ดูแลเซิร์ฟเวอร์เท่านั้น',
+                    ephemeral: true
+                });
+            }
+
+            const code = interaction.options.getString('code', true);
+
+            try {
+                const result = rewardCode.disableCode(code);
+
+                return interaction.reply({
+                    content:
+                        `✅ ปิด Reward Code สำเร็จ\n` +
+                        `🎟️ Code: \`${result.code}\``,
+                    ephemeral: true
+                });
+            } catch (error) {
+                const messages = {
+                    CODE_NOT_FOUND: 'ไม่พบ Reward Code นี้'
+                };
+
+                return interaction.reply({
+                    content: `❌ ${messages[error.message] || 'เกิดข้อผิดพลาดในการปิด Code'}`,
+                    ephemeral: true
+                });
+            }
         }
 
         if (cmd === 'register') {

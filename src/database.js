@@ -185,6 +185,34 @@ CREATE TABLE IF NOT EXISTS admin_confirmations (
  confirmed INTEGER NOT NULL DEFAULT 0,
  created_at INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS reward_codes (
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ code TEXT NOT NULL UNIQUE,
+ amount INTEGER NOT NULL CHECK(amount > 0),
+ max_uses INTEGER NOT NULL CHECK(max_uses > 0),
+ uses_count INTEGER NOT NULL DEFAULT 0 CHECK(uses_count >= 0),
+ expires_at INTEGER,
+ created_by TEXT NOT NULL,
+ created_at INTEGER NOT NULL,
+ disabled INTEGER NOT NULL DEFAULT 0 CHECK(disabled IN (0,1))
+);
+
+CREATE TABLE IF NOT EXISTS reward_code_uses (
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ code_id INTEGER NOT NULL,
+ player_id TEXT NOT NULL,
+ amount INTEGER NOT NULL CHECK(amount > 0),
+ created_at INTEGER NOT NULL,
+ UNIQUE(code_id, player_id),
+ FOREIGN KEY(code_id) REFERENCES reward_codes(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_reward_codes_code
+ ON reward_codes(code);
+
+CREATE INDEX IF NOT EXISTS idx_reward_code_uses_player
+ ON reward_code_uses(player_id);
 `);
 
 function now() { return Math.floor(Date.now() / 1000); }
