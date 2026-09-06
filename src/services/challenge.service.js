@@ -59,7 +59,11 @@ function createChallenge({challengerId,targetId,reason=''}) {
   if(pairScoredToday(a.discord_id,b.discord_id)>=config.maxPairScoredDaily) throw new Error('PAIR_DAILY_SCORED_LIMIT');
   if(rankedStartedToday(a.discord_id)>=config.maxRankedDaily || rankedStartedToday(b.discord_id)>=config.maxRankedDaily) throw new Error('RANKED_DAILY_LIMIT');
   const season=db.prepare("SELECT * FROM seasons WHERE status='ACTIVE' ORDER BY id DESC LIMIT 1").get();
-  const t=now(), code=`CH-${t.toString(36).toUpperCase()}-${Math.random().toString(36).slice(2,6).toUpperCase()}`;
+  const t=now();
+let code;
+do {
+    code=String(Math.floor(1000 + Math.random() * 9000));
+} while (db.prepare('SELECT 1 FROM challenges WHERE challenge_code=?').get(code));
   db.prepare('INSERT INTO challenges(challenge_code,season_id,challenger_id,target_id,status,reason,created_at,expires_at) VALUES(?,?,?,?,?,?,?,?)').run(code,season.id,a.discord_id,b.discord_id,'PENDING',reason,t,t+config.challengeTimeoutSeconds);
   return db.prepare('SELECT * FROM challenges WHERE challenge_code=?').get(code);
 }
@@ -69,30 +73,94 @@ function expire(code) {
   if(c.status==='PENDING' && c.expires_at<=now()) db.prepare("UPDATE challenges SET status='EXPIRED' WHERE id=?").run(c.id);
   return db.prepare('SELECT * FROM challenges WHERE id=?').get(c.id);
 }
-function acceptChallenge(code,acceptingUserId) {
-  let c=db.prepare('SELECT * FROM challenges WHERE challenge_code=?').get(code); if(!c) throw new Error('CHALLENGE_NOT_FOUND');
-  if(c.target_id!==acceptingUserId) throw new Error('NOT_CHALLENGE_TARGET');
-  c=expire(code); if(c.status!=='PENDING') throw new Error('CHALLENGE_NOT_ACTIVE');
-  const a=getPlayer(c.challenger_id), b=getPlayer(c.target_id); validatePlayer(a); validatePlayer(b);
-  if(activeMatch(a.discord_id)||activeMatch(b.discord_id)) throw new Error('ACTIVE_MATCH');
-  const diff=Math.abs(a.score-b.score);
-  if(diff>150) throw new Error('SCORE_DIFFERENCE_REQUIRES_ADMIN_APPROVAL');
-  if(protectedPlayer(b)&&a.score>=b.score+150) throw new Error('TARGET_IS_PROTECTED');
-  const cd=pairCooldownSeconds(a.discord_id,b.discord_id); if(cd) throw new Error(`PAIR_COOLDOWN_${cd}`);
-  if(pairScoredToday(a.discord_id,b.discord_id)>=config.maxPairScoredDaily) throw new Error('PAIR_DAILY_SCORED_LIMIT');
-  if(rankedStartedToday(a.discord_id)>=config.maxRankedDaily||rankedStartedToday(b.discord_id)>=config.maxRankedDaily) throw new Error('RANKED_DAILY_LIMIT');
-  const season=db.prepare("SELECT * FROM seasons WHERE status='ACTIVE' ORDER BY id DESC LIMIT 1").get(), t=now();
-  const code2=`CW-${t.toString(36).toUpperCase()}-${Math.random().toString(36).slice(2,8).toUpperCase()}`;
-  const tx=db.transaction(()=>{
-    db.prepare("UPDATE challenges SET status='ACCEPTED',accepted_at=? WHERE id=?").run(t,c.id);
-    db.prepare(`INSERT INTO matches(match_code,season_id,player_a_id,player_b_id,status,match_type,score_a_before,score_b_before,class_a_before,class_b_before,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`)
-      .run(code2,season.id,a.discord_id,b.discord_id,'APPROVED','RANKED',a.score,b.score,score.classOf(a.score),score.classOf(b.score),t,t);
-    ensureDaily(a.discord_id); ensureDaily(b.discord_id);
-    db.prepare('UPDATE daily_stats SET ranked_started=ranked_started+1 WHERE day_key=? AND player_id=?').run(dayKey(t),a.discord_id);
-    db.prepare('UPDATE daily_stats SET ranked_started=ranked_started+1 WHERE day_key=? AND player_id=?').run(dayKey(t),b.discord_id);
-  }); tx();
-  return db.prepare('SELECT * FROM matches WHERE match_code=?').get(code2);
+function acceptChallenge(code, acceptingUserId) {
+  let c = db.prepare(
+    'SELECT * FROM challenges WHERE challenge_code=?'
+  ).get(String(code));
+
+  if (!c) throw new Error('CHALLENGE_NOT_FOUND');
+
+  c = expire(String(code));
+
+  if (c.status !== 'PENDING') {
+    throw new Error('CHALLENGE_NOT_ACTIVE');
+  }
+
+  if (String(c.target_id) !== String(acceptingUserId)) {
+    throw new Error('NOT_CHALLENGE_TARGET');
+  }
+
+  const a = getPlayer(c.challenger_id);
+  const b = getPlayer(c.target_id);
+
+  validatePlayer(a);
+  validatePlayer(b);
+
+  if (activeMatch(a.discord_id) || activeMatch(b.discord_id)) {
+    throw new Error('ACTIVE_MATCH');
+  }
+
+  const season = db.prepare(
+    "SELECT * FROM seasons WHERE status='ACTIVE' ORDER BY id DESC LIMIT 1"
+  ).get();
+
+  if (!season) throw new Error('NO_ACTIVE_SEASON');
+
+  const t = now();
+
+  let matchCode;
+  do {
+    matchCode = String(Math.floor(1000 + Math.random() * 9000));
+  } while (
+    db.prepare('SELECT 1 FROM matches WHERE match_code=?').get(matchCode)
+  );
+
+  const tx = db.transaction(() => {
+    db.prepare(
+      "UPDATE challenges SET status='ACCEPTED', accepted_at=? WHERE id=?"
+    ).run(t, c.id);
+
+    db.prepare(`
+      INSERT INTO matches (
+        match_code, season_id, player_a_id, player_b_id,
+        status, match_type, score_a_before, score_b_before,
+        class_a_before, class_b_before, created_at, updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      matchCode,
+      season.id,
+      a.discord_id,
+      b.discord_id,
+      'APPROVED',
+      'RANKED',
+      a.score,
+      b.score,
+      score.class0f(a.score),
+      score.class0f(b.score),
+      t,
+      t
+    );
+
+    ensureDaily(a.discord_id);
+    ensureDaily(b.discord_id);
+
+    db.prepare(
+      'UPDATE daily_stats SET ranked_started=ranked_started+1 WHERE day_key=? AND player_id=?'
+    ).run(dayKey(t), a.discord_id);
+
+    db.prepare(
+      'UPDATE daily_stats SET ranked_started=ranked_started+1 WHERE day_key=? AND player_id=?'
+    ).run(dayKey(t), b.discord_id);
+  });
+
+  tx();
+
+  return db.prepare(
+    'SELECT * FROM matches WHERE match_code=?'
+  ).get(matchCode);
 }
+
 function decline(code,userId,reason='') {
   const c=db.prepare('SELECT * FROM challenges WHERE challenge_code=?').get(code); if(!c) throw new Error('CHALLENGE_NOT_FOUND');
   if(c.target_id!==userId) throw new Error('NOT_CHALLENGE_TARGET');

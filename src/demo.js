@@ -4,8 +4,17 @@ const match=require('./services/match.service');
 const score=require('./services/score.service');
 
 const admin='ADMIN-DEMO';
-const a=challenge.ensurePlayer({discordId:'demo-a',displayName:'Aoi'});
-const b=challenge.ensurePlayer({discordId:'demo-b',displayName:'Ren'});
+const runId = Date.now();
+
+const a = challenge.ensurePlayer({
+  discordId: `demo-a-${runId}`,
+  displayName: 'Aoi'
+});
+
+const b = challenge.ensurePlayer({
+  discordId: `demo-b-${runId}`,
+  displayName: 'Ren'
+});
 console.log('Players:', a.player_id, b.player_id);
 const c=challenge.createChallenge({challengerId:a.discord_id,targetId:b.discord_id});
 console.log('Challenge:',c.challenge_code);
