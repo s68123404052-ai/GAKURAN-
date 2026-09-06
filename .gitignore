@@ -1,3 +1,14 @@
 node_modules/
 data/
 .env
+
+# Python
+__pycache__/
+*.pyc
+
+# SQLite test/local databases
+*.db
+
+# Backup files
+*.bak
+src/bot/*.backup-*

@@ -11,6 +11,7 @@ const challenge = require('../services/challenge.service');
 const match = require('../services/match.service');
 const scoreService = require('../services/score.service');
 const bonus = require('../services/bonus.service');
+const { db } = require('../database');
 
 const TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID || '1545387353143640176';
@@ -88,7 +89,7 @@ const commands = [
     new SlashCommandBuilder()
         .setName('decline')
         .setDescription('ปฏิเสธคำท้า')
-        .addIntegerOption(o =>
+        .addStringOption(o =>
             o.setName('id')
                 .setDescription('Challenge ID')
                 .setRequired(true)
@@ -129,6 +130,34 @@ const commands = [
             o.setName('winner')
                 .setDescription('ผู้ชนะ')
                 .setRequired(true)
+        ),
+
+    new SlashCommandBuilder()
+        .setName('daily')
+        .setDescription('รับคะแนน Daily Login +10'),
+
+    new SlashCommandBuilder()
+        .setName('event-reward')
+        .setDescription('แจกคะแนนกิจกรรม (Admin)')
+        .addUserOption(o =>
+            o.setName('user')
+                .setDescription('ผู้เล่น')
+                .setRequired(true)
+        )
+        .addStringOption(o =>
+            o.setName('event_id')
+                .setDescription('รหัสกิจกรรม')
+                .setRequired(true)
+        )
+        .addStringOption(o =>
+            o.setName('type')
+                .setDescription('ประเภทโบนัส')
+                .setRequired(true)
+                .addChoices(
+                    { name: 'เข้าร่วม +15', value: 'PARTICIPATE' },
+                    { name: 'ชนะทีม +30', value: 'WINNER' },
+                    { name: 'MVP +45', value: 'MVP' }
+                )
         ),
 
     new SlashCommandBuilder()
@@ -251,6 +280,114 @@ return interaction.reply({
             });
         }
 
+        if (cmd === 'event-reward') {
+          if (!isAdmin(interaction)) {
+            return interaction.reply({
+              content: '❌ เฉพาะ Administrator เท่านั้น',
+              ephemeral: true
+            });
+          }
+
+          const target = interaction.options.getUser('user');
+          const eventId = interaction.options.getString('event_id');
+          const type = interaction.options.getString('type');
+
+          const amounts = {
+            PARTICIPATE: 15,
+            WINNER: 30,
+            MVP: 45
+          };
+
+          const amount = amounts[type];
+          if (!amount) {
+            return interaction.reply({
+              content: '❌ ประเภทโบนัสไม่ถูกต้อง',
+              ephemeral: true
+            });
+          }
+
+          const player = challenge.getPlayer(target.id);
+
+          if (!player) {
+            return interaction.reply({
+              content: '❌ ผู้เล่นยังไม่ได้ลงทะเบียน',
+              ephemeral: true
+            });
+          }
+
+          const exists = db.prepare(
+            'SELECT 1 FROM event_rewards WHERE event_id=? AND player_id=? AND reward_type=?'
+          ).get(eventId, target.id, type);
+
+          if (exists) {
+            return interaction.reply({
+              content: '❌ ผู้เล่นได้รับโบนัสประเภทนี้ใน Event นี้ไปแล้ว',
+              ephemeral: true
+            });
+          }
+
+          const before = player.score;
+          const after = before + amount;
+
+          db.prepare(
+            'UPDATE players SET score=? WHERE discord_id=?'
+          ).run(after, target.id);
+
+          db.prepare(
+            'INSERT INTO event_rewards(event_id,player_id,reward_type,amount,created_at) VALUES(?,?,?,?,?)'
+          ).run(eventId, target.id, type, amount, Math.floor(Date.now() / 1000));
+
+          const embed = new EmbedBuilder()
+            .setColor('#e8a0bf')
+            .setAuthor({ name: 'GAKURAN ACADEMY' })
+            .setTitle('EVENT REWARD')
+            .setDescription('Event Bonus • イベント報酬')
+            .addFields(
+              { name: 'PLAYER', value: `<@${target.id}>`, inline: true },
+              { name: 'TYPE', value: `**${type}**`, inline: true },
+              { name: 'BONUS', value: `**+${amount} POINTS**`, inline: true },
+              { name: 'SCORE', value: `**${before} → ${after}**`, inline: true },
+              { name: 'EVENT', value: `\`${eventId}\``, inline: true }
+            )
+            .setFooter({
+              text: 'GAKURAN ACADEMY • EVENT REWARD'
+            })
+            .setTimestamp();
+
+          return interaction.reply({
+            embeds: [embed]
+          });
+        }
+
+        if (cmd === 'daily') {
+          const result = bonus.claimDaily(interaction.user.id);
+
+          if (!result.claimed) {
+            return interaction.reply({
+              content: '❌ คุณรับ Daily Login ไปแล้ววันนี้',
+              ephemeral: true
+            });
+          }
+
+          const embed = new EmbedBuilder()
+            .setColor('#e8a0bf')
+            .setAuthor({ name: 'GAKURAN ACADEMY' })
+            .setTitle('☀️ DAILY LOGIN')
+            .setDescription('Daily Login Bonus • デイリーログイン')
+            .addFields(
+              { name: 'BONUS', value: '**+10 POINTS**', inline: true },
+              { name: 'SCORE', value: `**${result.before} → ${result.after}**`, inline: true }
+            )
+            .setFooter({
+              text: 'GAKURAN ACADEMY • DAILY REWARD'
+            })
+            .setTimestamp();
+
+          return interaction.reply({
+            embeds: [embed]
+          });
+        }
+
         if (cmd === 'profile') {
             const id = getUserId(interaction);
             const player = challenge.getPlayer(id);
@@ -305,7 +442,6 @@ return interaction.reply({
         }
 
         if (cmd === 'leaderboard') {
-            const { db } = require('../database');
             const rows = db.prepare(`
                 SELECT discord_id, display_name, score
                 FROM players
@@ -317,16 +453,30 @@ return interaction.reply({
                 return interaction.reply('ยังไม่มีผู้เล่น');
             }
 
-            const text = rows.map((p, i) =>
-                `#${i + 1} ${p.display_name || p.discord_id} — ${p.score} (${scoreService.class0f(p.score)})`
-            ).join('\n');
+            const embed = new EmbedBuilder()
+                .setColor('#e8a0bf')
+                .setAuthor({ name: 'GAKURAN ACADEMY' })
+                .setTitle('🏆 STUDENT RANKING')
+                .setDescription('TOP 10 STUDENTS • 学生ランキング')
+                .addFields(
+                    rows.map((p, i) => ({
+                        name: `#${i + 1}  ${p.display_name || p.discord_id}`,
+                        value: `**${p.score}** points • ${scoreService.class0f(p.score)}`,
+                        inline: false
+                    }))
+                )
+                .setFooter({
+                    text: 'GAKURAN ACADEMY • OFFICIAL RANKING'
+                })
+                .setTimestamp();
 
-            return interaction.reply(`🏆 Leaderboard\n${text}`);
+            return interaction.reply({
+                embeds: [embed]
+            });
         }
 
         if (cmd === 'history') {
             const id = getUserId(interaction);
-            const { db } = require('../database');
 
             const rows = db.prepare(`
                 SELECT match_code, player_a_id, player_b_id, status,
@@ -341,11 +491,26 @@ return interaction.reply({
                 return interaction.reply('ยังไม่มีประวัติการแข่งขัน');
             }
 
-            const text = rows.map(m =>
-                `Match ${m.match_code} | ${m.status} | ${m.result || '-'}`
-            ).join('\n');
+            const embed = new EmbedBuilder()
+                .setColor('#e8a0bf')
+                .setAuthor({ name: 'GAKURAN ACADEMY' })
+                .setTitle('📜 MATCH HISTORY')
+                .setDescription('RECENT MATCHES • 試合履歴')
+                .addFields(
+                    rows.map((m, i) => ({
+                        name: `#${i + 1}  MATCH ${m.match_code}`,
+                        value: `Status: **${m.status}** • Result: **${m.result || '-'}**`,
+                        inline: false
+                    }))
+                )
+                .setFooter({
+                    text: 'GAKURAN ACADEMY • OFFICIAL MATCH RECORD'
+                })
+                .setTimestamp();
 
-            return interaction.reply(`📜 History\n${text}`);
+            return interaction.reply({
+                embeds: [embed]
+            });
         }
 
 if (cmd === 'challenge') {
@@ -373,8 +538,40 @@ if (cmd === 'challenge') {
       reason
     });
 
+    const embed = new EmbedBuilder()
+      .setColor('#e8a0bf')
+      .setAuthor({ name: 'GAKURAN ACADEMY' })
+      .setTitle('⚔️ CHALLENGE REQUEST')
+      .setDescription('対戦申請 • MATCH CHALLENGE')
+      .addFields(
+        {
+          name: '👤 CHALLENGER',
+          value: `**${interaction.user.username}**`,
+          inline: true
+        },
+        {
+          name: '🎯 TARGET',
+          value: `**${target.username}**`,
+          inline: true
+        },
+        {
+          name: '🆔 CHALLENGE ID',
+          value: `**${result.challenge_code}**`,
+          inline: false
+        },
+        {
+          name: '📝 REASON',
+          value: reason || '-',
+          inline: false
+        }
+      )
+      .setFooter({
+        text: 'GAKURAN ACADEMY • OFFICIAL CHALLENGE'
+      })
+      .setTimestamp();
+
     return interaction.reply({
-      content: `สร้างคำท้าแล้ว\nChallenge ID: ${result.challenge_code}`
+      embeds: [embed]
     });
 
   } catch (error) {
@@ -389,16 +586,49 @@ if (cmd === 'challenge') {
 
 if (cmd === 'accept') {
   try {
-    const id = interaction.options.getInteger('id');
+    const id = interaction.options.getString('id');
 
     const result = challenge.acceptChallenge(
       String(id),
       interaction.user.id
     );
 
+    const embed = new EmbedBuilder()
+      .setColor('#e8a0bf')
+      .setAuthor({ name: 'GAKURAN ACADEMY' })
+      .setTitle('✅ CHALLENGE ACCEPTED')
+      .setDescription('対戦承認 • CHALLENGE ACCEPTED')
+      .addFields(
+        {
+          name: '🆔 CHALLENGE ID',
+          value: `**${id}**`,
+          inline: true
+        },
+        {
+          name: '⚔️ MATCH CODE',
+          value: `**${result.match_code}**`,
+          inline: true
+        },
+        {
+          name: '👤 STUDENT',
+          value: `**${interaction.user.username}**`,
+          inline: false
+        },
+        {
+          name: '📌 STATUS',
+          value: '**ACCEPTED**',
+          inline: false
+        }
+      )
+      .setFooter({
+        text: 'GAKURAN ACADEMY • OFFICIAL CHALLENGE'
+      })
+      .setTimestamp();
+
     return interaction.reply({
-      content: `รับคำท้าแล้ว\nMatch Code: ${result.match_code}`
+      embeds: [embed]
     });
+
   } catch (error) {
     console.error('ACCEPT ERROR:', error);
 
@@ -410,12 +640,51 @@ if (cmd === 'accept') {
 }
 
 if (cmd === 'decline') {
-            const id = interaction.options.getInteger('id');
+  try {
+    const id = interaction.options.getString('id');
 
-            challenge.decline(id, interaction.user.id);
+    challenge.decline(id, interaction.user.id);
 
-            return interaction.reply('❌ ปฏิเสธคำท้าแล้ว');
+    const embed = new EmbedBuilder()
+      .setColor('#e8a0bf')
+      .setAuthor({ name: 'GAKURAN ACADEMY' })
+      .setTitle('❌ CHALLENGE DECLINED')
+      .setDescription('対戦辞退 • CHALLENGE DECLINED')
+      .addFields(
+        {
+          name: '🆔 CHALLENGE ID',
+          value: `**${id}**`,
+          inline: true
+        },
+        {
+          name: '👤 STUDENT',
+          value: `**${interaction.user.username}**`,
+          inline: true
+        },
+        {
+          name: '📌 STATUS',
+          value: '**DECLINED**',
+          inline: false
         }
+      )
+      .setFooter({
+        text: 'GAKURAN ACADEMY • OFFICIAL CHALLENGE'
+      })
+      .setTimestamp();
+
+    return interaction.reply({
+      embeds: [embed]
+    });
+
+  } catch (error) {
+    console.error('DECLINE ERROR:', error);
+
+    return interaction.reply({
+      content: `ไม่สามารถดำเนินการได้: ${error.message}`,
+      ephemeral: true
+    });
+  }
+}
 
         if (cmd === 'start') {
             const code = interaction.options.getString('code');
@@ -468,19 +737,42 @@ if (cmd === 'decline') {
         }
 
         if (cmd === 'rank') {
-            const id = getUserId(interaction);
-            const player = challenge.getPlayer(id);
+            const embed = new EmbedBuilder()
+                .setColor('#e8a0bf')
+                .setAuthor({ name: 'GAKURAN ACADEMY' })
+                .setTitle('🎓 RANK SYSTEM')
+                .setDescription('CLASS RANKING • 学生ランクシステム')
+                .addFields(
+                    { name: '01 • UNRANKED', value: '**0 – 99** points', inline: true },
+                    { name: '02 • ROOKIE', value: '**100 – 199** points', inline: true },
+                    { name: '03 • STUDENT', value: '**200 – 299** points', inline: true },
+                    { name: '04 • ELITE STUDENT', value: '**300 – 399** points', inline: true },
+                    { name: '05 • PREFECT', value: '**400 – 499** points', inline: true },
+                    { name: '06 • EXECUTIVE', value: '**500 – 599** points', inline: true },
+                    { name: '07 • VETERAN', value: '**600 – 699** points', inline: true },
+                    { name: '08 • ELITE', value: '**700 – 799** points', inline: true },
+                    { name: '09 • MASTER', value: '**800 – 899** points', inline: true },
+                    { name: '10 • CHAMPION', value: '**900 – 999** points', inline: true },
+                    { name: '11 • GRAND CHAMPION', value: '**1000 – 1099** points', inline: true },
+                    { name: '12 • OVERLORD', value: '**1100 – 1199** points', inline: true },
+                    { name: '13 • IMMORTAL', value: '**1200 – 1299** points', inline: true },
+                    { name: '14 • SUPREME', value: '**1300 – 1399** points', inline: true },
+                    { name: '15 • ASCENDANT', value: '**1400 – 1499** points', inline: true },
+                    { name: '16 • EMPEROR', value: '**1500 – 1599** points', inline: true },
+                    { name: '17 • MYTHIC', value: '**1600 – 1699** points', inline: true },
+                    { name: '18 • LEGEND', value: '**1700 – 1799** points', inline: true },
+                    { name: '19 • LEGENDARY', value: '**1800 – 1899** points', inline: true },
+                    { name: '20 • GOD', value: '**1900 – 1999** points', inline: true },
+                    { name: '21 • GODLIKE', value: '**2000+** points', inline: true }
+                )
+                .setFooter({
+                    text: 'GAKURAN ACADEMY • OFFICIAL RANK SYSTEM'
+                })
+                .setTimestamp();
 
-            if (!player) {
-                return interaction.reply({
-                    content: 'ยังไม่ได้ลงทะเบียน',
-                    ephemeral: true
-                });
-            }
-
-            return interaction.reply(
-                `🏅 ${player.display_name || player.discord_id}\nชนชั้น: ${scoreService.class0f(player.score)}\nคะแนน: ${player.score}`
-            );
+            return interaction.reply({
+                embeds: [embed]
+            });
         }
 
         if (cmd === 'match') {
@@ -526,7 +818,6 @@ if (cmd === 'decline') {
                 });
             }
 
-            const { db } = require('../database');
 
             const rows = db.prepare(`
                 SELECT
@@ -545,17 +836,61 @@ if (cmd === 'decline') {
             const draws = rows.draws || 0;
             const winRate = total ? ((wins / total) * 100).toFixed(1) : '0.0';
 
-            return interaction.reply(
-                `📊 สถิติ ${player.display_name || player.discord_id}\n` +
-                `อันดับคะแนน: ดูจาก Leaderboard\n` +
-                `คะแนน: ${player.score}\n` +
-                `ชนชั้น: ${scoreService.class0f(player.score)}\n` +
-                `แมตช์ทั้งหมด: ${total}\n` +
-                `ชนะ: ${wins}\n` +
-                `แพ้: ${losses}\n` +
-                `เสมอ: ${draws}\n` +
-                `Win Rate: ${winRate}%`
-            );
+            const embed = new EmbedBuilder()
+                .setColor('#e8a0bf')
+                .setAuthor({
+                    name: 'GAKURAN ACADEMY'
+                })
+                .setTitle('📊 STUDENT STATS')
+                .setDescription(
+                    `**${player.display_name || player.discord_id}**\n` +
+                    `個人成績 • Personal Statistics`
+                )
+                .addFields(
+                    {
+                        name: '🏆 SCORE',
+                        value: `**${player.score}**`,
+                        inline: true
+                    },
+                    {
+                        name: '🎓 CLASS',
+                        value: `**${scoreService.class0f(player.score)}**`,
+                        inline: true
+                    },
+                    {
+                        name: '⚔️ MATCHES',
+                        value: `**${total}**`,
+                        inline: true
+                    },
+                    {
+                        name: '✅ WINS',
+                        value: `**${wins}**`,
+                        inline: true
+                    },
+                    {
+                        name: '❌ LOSSES',
+                        value: `**${losses}**`,
+                        inline: true
+                    },
+                    {
+                        name: '➖ DRAWS',
+                        value: `**${draws}**`,
+                        inline: true
+                    },
+                    {
+                        name: '📈 WIN RATE',
+                        value: `**${winRate}%**`,
+                        inline: false
+                    }
+                )
+                .setFooter({
+                    text: 'GAKURAN ACADEMY • OFFICIAL STUDENT RECORD'
+                })
+                .setTimestamp();
+
+            return interaction.reply({
+                embeds: [embed]
+            });
         }
 
         if (cmd === 'draw') {

@@ -127,6 +127,16 @@ CREATE TABLE IF NOT EXISTS bonus_logs (
  reason TEXT NOT NULL,
  created_at INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS event_rewards (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  event_id TEXT NOT NULL,
+  player_id TEXT NOT NULL,
+  reward_type TEXT NOT NULL,
+  amount INTEGER NOT NULL,
+  created_at INTEGER NOT NULL,
+  UNIQUE(event_id, player_id, reward_type)
+);
+
 CREATE TABLE IF NOT EXISTS daily_stats (
  day_key TEXT NOT NULL,
  player_id TEXT NOT NULL,
