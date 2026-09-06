@@ -48,6 +48,48 @@ function selectForMatch(args){
     db.prepare('INSERT INTO bonus_logs(match_id,player_id,bonus_type,amount,priority,selected,reason,created_at) VALUES(?,?,?,?,?,?,?,?)')
       .run(args.match.id,args.winnerId,c.type,c.amount,c.priority,c===selected?1:0,c===selected?c.reason:`Not selected; higher priority bonus exists`,t);
   }
+
+  if(selected?.type === 'BOUNTY'){
+    const d = challenge.ensureDaily(args.winnerId);
+    db.prepare(`
+      UPDATE daily_stats
+      SET bounty_count = bounty_count + 1,
+          bounty_points = bounty_points + ?
+      WHERE day_key = ? AND player_id = ?
+    `).run(selected.amount, challenge.dayKey());
+  }
+
   return selected;
 }
-module.exports={PRIORITY,evaluate,selectForMatch};
+function claimDaily(playerId){
+  const d = challenge.ensureDaily(playerId);
+
+  if(d.daily_claimed){
+    return {claimed:false, amount:0, reason:'DAILY_ALREADY_CLAIMED'};
+  }
+
+  const p = player(playerId);
+  if(!p) throw new Error('PLAYER_NOT_FOUND');
+
+  const amount = 10;
+  const before = p.score;
+  const after = before + amount;
+
+  db.prepare(
+    'UPDATE players SET score=? WHERE discord_id=?'
+  ).run(after, playerId);
+
+  db.prepare(
+    'UPDATE daily_stats SET daily_claimed=1 WHERE day_key=? AND player_id=?'
+  ).run(challenge.dayKey(), playerId);
+
+  return {
+    claimed:true,
+    amount,
+    before,
+    after,
+    reason:'DAILY_LOGIN'
+  };
+}
+
+module.exports={PRIORITY,evaluate,selectForMatch,claimDaily};

@@ -2,8 +2,21 @@ const { db, now, txId } = require('../database');
 const config = require('../config');
 
 function class0f(score) {
+  if (score >= 2000) return 'GODLIKE';
+  if (score >= 1900) return 'GOD';
+  if (score >= 1800) return 'LEGENDARY';
+  if (score >= 1700) return 'LEGEND';
+  if (score >= 1600) return 'MYTHIC';
+  if (score >= 1500) return 'EMPEROR';
+  if (score >= 1400) return 'ASCENDANT';
+  if (score >= 1300) return 'SUPREME';
+  if (score >= 1200) return 'IMMORTAL';
+  if (score >= 1100) return 'OVERLORD';
+  if (score >= 1000) return 'GRAND CHAMPION';
   if (score >= 900) return 'CHAMPION';
+  if (score >= 800) return 'MASTER';
   if (score >= 700) return 'ELITE';
+  if (score >= 600) return 'VETERAN';
   if (score >= 500) return 'EXECUTIVE';
   if (score >= 400) return 'PREFECT';
   if (score >= 300) return 'ELITE STUDENT';
@@ -78,6 +91,7 @@ function applyScore({
   loserId,
   allowSpecial = false,
   bonusAmount = 0,
+  bonusType = null,
   adminId = null
 }) {
   const match = db.prepare(
@@ -156,6 +170,21 @@ function applyScore({
     failUntil + extraRest
   );
 
+  let comebackLossIds = [];
+  try {
+    comebackLossIds = JSON.parse(loser.comeback_loss_ids || '[]');
+  } catch {
+    comebackLossIds = [];
+  }
+
+  comebackLossIds.push(winner.discord_id);
+  comebackLossIds = comebackLossIds.slice(-3);
+
+  const comebackPending =
+    loserStreak === 3
+      ? 1
+      : loser.comeback_pending;
+
   const scoreAAfter = winner.discord_id === match.player_a_id
       ? winnerAfter
       : loserAfter;
@@ -172,11 +201,15 @@ function applyScore({
           scored_matches = scored_matches + 1,
           win_streak = ?,
           losing_streak = 0,
+          comeback_pending = CASE WHEN ? = 'COMEBACK' THEN 0 ELSE comeback_pending END,
+          comeback_loss_ids = CASE WHEN ? = 'COMEBACK' THEN '[]' ELSE comeback_loss_ids END,
           updated_at = ?
       WHERE discord_id = ?
     `).run(
       winnerAfter,
       winnerStreak,
+      bonusType || null,
+      bonusType || null,
       timestamp,
       winner.discord_id
     );
@@ -188,6 +221,8 @@ function applyScore({
           scored_matches = scored_matches + 1,
           win_streak = 0,
           losing_streak = ?,
+          comeback_pending = ?,
+          comeback_loss_ids = ?,
           fail_until = ?,
           rest_until = ?,
           updated_at = ?
@@ -195,6 +230,8 @@ function applyScore({
     `).run(
       loserAfter,
       loserStreak,
+      comebackPending,
+      JSON.stringify(comebackLossIds),
       failUntil,
       restUntil,
       timestamp,
