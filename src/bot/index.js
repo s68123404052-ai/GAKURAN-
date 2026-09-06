@@ -751,23 +751,38 @@ return interaction.reply({
             `).all();
 
             if (!rows.length) {
-                return interaction.reply('ยังไม่มีผู้เล่น');
+                return interaction.reply({
+                    content: '📭 ยังไม่มีผู้เล่นใน Ranking',
+                    ephemeral: true
+                });
             }
+
+            const medals = ['🥇', '🥈', '🥉'];
 
             const embed = new EmbedBuilder()
                 .setColor('#e8a0bf')
                 .setAuthor({ name: 'GAKURAN ACADEMY' })
                 .setTitle('🏆 STUDENT RANKING')
-                .setDescription('TOP 10 STUDENTS • 学生ランキング')
+                .setDescription(
+                    'TOP 10 STUDENTS • 学生ランキング\n' +
+                    '━━━━━━━━━━━━━━━━━━━━'
+                )
                 .addFields(
-                    rows.map((p, i) => ({
-                        name: `#${i + 1}  ${p.display_name || p.discord_id}`,
-                        value: `**${p.score}** points • ${scoreService.class0f(p.score)}`,
-                        inline: false
-                    }))
+                    rows.map((p, i) => {
+                        const rank = i + 1;
+                        const prefix = medals[i] || `**#${rank}**`;
+
+                        return {
+                            name: `${prefix}  ${p.display_name || p.discord_id}`,
+                            value:
+                                `📊 **${p.score}** points\n` +
+                                `🎖️ ${scoreService.class0f(p.score)}`,
+                            inline: false
+                        };
+                    })
                 )
                 .setFooter({
-                    text: 'GAKURAN ACADEMY • OFFICIAL RANKING'
+                    text: 'GAKURAN ACADEMY • OFFICIAL RANKING • TOP 10'
                 })
                 .setTimestamp();
 
