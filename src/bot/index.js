@@ -734,6 +734,16 @@ if (cmd === 'decline') {
                 interaction.user.id
             );
 
+            if (result.applied?.scored) {
+                const { winnerId, winnerAfter, loserId, loserAfter } = result.applied;
+
+                const winnerMember = await interaction.guild.members.fetch(winnerId);
+                const loserMember = await interaction.guild.members.fetch(loserId);
+
+                await discordRole.syncRole(winnerMember, winnerAfter);
+                await discordRole.syncRole(loserMember, loserAfter);
+            }
+
             return interaction.reply(
                 `✅ ยืนยันผล Match ${code} แล้ว\nสถานะ: ${result.status}`
             );
