@@ -251,6 +251,10 @@ const commands = [
         ),
 
     new SlashCommandBuilder()
+        .setName('help')
+        .setDescription('คู่มือการใช้งาน GAKURAN'),
+
+    new SlashCommandBuilder()
         .setName('draw')
         .setDescription('บันทึกผลเสมอ')
         .addStringOption(o =>
@@ -787,6 +791,71 @@ return interaction.reply({
                 )
                 .setFooter({
                     text: 'GAKURAN ACADEMY • OFFICIAL STUDENT RECORD'
+                })
+                .setTimestamp();
+
+            return interaction.reply({
+                embeds: [embed]
+            });
+        }
+
+        if (cmd === 'help') {
+            const embed = new EmbedBuilder()
+                .setColor('#e8a0bf')
+                .setAuthor({ name: 'GAKURAN ACADEMY' })
+                .setTitle('📖 GAKURAN HELP CENTER')
+                .setDescription(
+                    'คู่มือคำสั่ง GAKURAN • 操作ガイド\n' +
+                    '━━━━━━━━━━━━━━━━━━━━'
+                )
+                .addFields(
+                    {
+                        name: '🎓 PLAYER',
+                        value:
+                            '`/profile` — ดูโปรไฟล์และอันดับ\n' +
+                            '`/stats` — ดูสถิติผู้เล่น\n' +
+                            '`/history` — ดูประวัติการแข่งขัน\n' +
+                            '`/leaderboard` — ดู TOP 10 Ranking\n' +
+                            '`/rank` — ดูระบบชนชั้นทั้งหมด',
+                        inline: false
+                    },
+                    {
+                        name: '⚔️ MATCH',
+                        value:
+                            '`/challenge` — ท้าดวล\n' +
+                            '`/accept` — ยอมรับคำท้า\n' +
+                            '`/decline` — ปฏิเสธคำท้า\n' +
+                            '`/start` — เริ่มการแข่งขัน\n' +
+                            '`/match` — ดูข้อมูล Match\n' +
+                            '`/submit` — ส่งหลักฐาน\n' +
+                            '`/evidence` — ดูหลักฐาน\n' +
+                            '`/verify` — ยืนยันผล\n' +
+                            '`/draw` — บันทึกผลเสมอ\n' +
+                            '`/cancel` — ยกเลิก Match',
+                        inline: false
+                    },
+                    {
+                        name: '🎁 REWARD',
+                        value:
+                            '`/daily` — รับคะแนนประจำวัน\n' +
+                            '`/redeem-code` — ใช้ Reward Code\n' +
+                            '`/event-reward` — รับรางวัลกิจกรรม',
+                        inline: false
+                    },
+                    {
+                        name: '🛡️ ADMIN',
+                        value:
+                            '`/register` — ลงทะเบียนผู้เล่น\n' +
+                            '`/score` — ตรวจสอบคะแนน\n' +
+                            '`/sync-ranks` — Sync Discord Roles\n' +
+                            '`/create-code` — สร้าง Reward Code\n' +
+                            '`/codes` — ดู Reward Codes\n' +
+                            '`/disable-code` — ปิด Reward Code',
+                        inline: false
+                    }
+                )
+                .setFooter({
+                    text: 'GAKURAN ACADEMY • OFFICIAL COMMAND GUIDE'
                 })
                 .setTimestamp();
 
