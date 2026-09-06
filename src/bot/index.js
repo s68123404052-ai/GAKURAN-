@@ -701,22 +701,53 @@ return interaction.reply({
             }
 
             const rank = scoreService.class0f(player.score);
-            const avatar = interaction.user.displayAvatarURL({ extension: 'png', size: 256 });
-            const serverLogo = interaction.guild?.iconURL({ extension: 'png', size: 256 });
+
+            const leaderboardRank = db.prepare(`
+                SELECT COUNT(*) + 1 AS rank
+                FROM players
+                WHERE score > ?
+            `).get(player.score).rank;
+
+            const totalMatches =
+                Number(player.wins || 0) +
+                Number(player.losses || 0) +
+                Number(player.draws || 0);
+
+            const winRate = totalMatches > 0
+                ? ((Number(player.wins || 0) / totalMatches) * 100).toFixed(1)
+                : '0.0';
+
+            const avatar = interaction.user.displayAvatarURL({
+                extension: 'png',
+                size: 256
+            });
+
+            const serverLogo =
+                interaction.guild?.iconURL({
+                    extension: 'png',
+                    size: 256
+                });
 
             const embed = new EmbedBuilder()
-                .setTitle('🏫 GAKURAN ACADEMY')
-                .setDescription('**STUDENT ID CARD**')
+                .setColor('#e8a0bf')
+                .setAuthor({ name: 'GAKURAN ACADEMY' })
+                .setTitle('🎓 STUDENT RANK PROFILE')
+                .setDescription(
+                    `**${player.display_name || interaction.user.username}**\n` +
+                    'STUDENT RECORD • 学生プロフィール'
+                )
                 .setThumbnail(serverLogo || client.user.displayAvatarURL())
                 .setImage(avatar)
                 .addFields(
                     {
-                        name: '👤 STUDENT',
-                        value: `**${player.display_name || interaction.user.username}**`
+                        name: '🏅 CLASS',
+                        value: `**${rank}**`,
+                        inline: true
                     },
                     {
-                        name: '🪪 DISCORD ID',
-                        value: `\`${player.discord_id}\``
+                        name: '🏆 LEADERBOARD',
+                        value: `**#${leaderboardRank}**`,
+                        inline: true
                     },
                     {
                         name: '⭐ SCORE',
@@ -724,8 +755,28 @@ return interaction.reply({
                         inline: true
                     },
                     {
-                        name: '🏅 CLASS',
-                        value: `**${rank}**`,
+                        name: '🥇 WINS',
+                        value: `**${player.wins || 0}**`,
+                        inline: true
+                    },
+                    {
+                        name: '❌ LOSSES',
+                        value: `**${player.losses || 0}**`,
+                        inline: true
+                    },
+                    {
+                        name: '🤝 DRAWS',
+                        value: `**${player.draws || 0}**`,
+                        inline: true
+                    },
+                    {
+                        name: '🔥 WIN STREAK',
+                        value: `**${player.win_streak || 0}**`,
+                        inline: true
+                    },
+                    {
+                        name: '📈 WIN RATE',
+                        value: `**${winRate}%**`,
                         inline: true
                     },
                     {
@@ -734,7 +785,9 @@ return interaction.reply({
                         inline: true
                     }
                 )
-                .setFooter({ text: 'GAKURAN ACADEMY • STUDENT RECORD' })
+                .setFooter({
+                    text: 'GAKURAN ACADEMY • OFFICIAL STUDENT RECORD'
+                })
                 .setTimestamp();
 
             return interaction.reply({
