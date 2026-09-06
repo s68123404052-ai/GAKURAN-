@@ -333,6 +333,9 @@ return interaction.reply({
             'UPDATE players SET score=? WHERE discord_id=?'
           ).run(after, target.id);
 
+          const member = await interaction.guild.members.fetch(target.id);
+          await discordRole.syncRole(member, after);
+
           db.prepare(
             'INSERT INTO event_rewards(event_id,player_id,reward_type,amount,created_at) VALUES(?,?,?,?,?)'
           ).run(eventId, target.id, type, amount, Math.floor(Date.now() / 1000));
