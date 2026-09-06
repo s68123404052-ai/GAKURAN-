@@ -11,8 +11,8 @@ const challenge = require('../services/challenge.service');
 const match = require('../services/match.service');
 const scoreService = require('../services/score.service');
 const bonus = require('../services/bonus.service');
+const discordRole = require('../services/discord-role.service');
 const { db } = require('../database');
-
 const TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID || '1545387353143640176';
 const GUILD_ID = process.env.GUILD_ID || '1238930251044880394';
