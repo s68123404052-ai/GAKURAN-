@@ -378,7 +378,12 @@ client.on('interactionCreate', async interaction => {
         if (cmd === 'create-code') {
             if (!isAdmin(interaction)) {
                 return interaction.reply({
-                    content: 'คำสั่งนี้ใช้ได้เฉพาะผู้ดูแลเซิร์ฟเวอร์เท่านั้น',
+                    embeds: [
+                        new EmbedBuilder()
+                            .setColor(0xFF69B4)
+                            .setTitle('❌ ไม่มีสิทธิ์')
+                            .setDescription('คำสั่งนี้ใช้ได้เฉพาะผู้ดูแลเซิร์ฟเวอร์เท่านั้น')
+                    ],
                     ephemeral: true
                 });
             }
@@ -406,12 +411,18 @@ client.on('interactionCreate', async interaction => {
                     : 'ไม่มีวันหมดอายุ';
 
                 return interaction.reply({
-                    content:
-                        `✅ สร้าง Reward Code สำเร็จ\n` +
-                        `🎟️ Code: \`${result.code}\`\n` +
-                        `💰 รางวัล: +${result.amount} คะแนน\n` +
-                        `👥 ใช้ได้: ${result.max_uses} ครั้ง\n` +
-                        `⏳ หมดอายุ: ${expiryText}`,
+                    embeds: [
+                        new EmbedBuilder()
+                            .setColor(0xFF69B4)
+                            .setTitle('🎁 สร้าง Reward Code สำเร็จ')
+                            .addFields(
+                                { name: '🎟️ Code', value: `\`${result.code}\``, inline: true },
+                                { name: '💰 รางวัล', value: `+${result.amount} คะแนน`, inline: true },
+                                { name: '👥 ใช้ได้', value: `${result.max_uses} ครั้ง`, inline: true },
+                                { name: '⏳ หมดอายุ', value: expiryText, inline: false }
+                            )
+                            .setFooter({ text: 'GAKURAN • Reward System' })
+                    ],
                     ephemeral: true
                 });
             } catch (error) {
@@ -424,7 +435,13 @@ client.on('interactionCreate', async interaction => {
                 };
 
                 return interaction.reply({
-                    content: `❌ ${messages[error.message] || 'เกิดข้อผิดพลาดในการสร้าง Code'}`,
+                    embeds: [
+                        new EmbedBuilder()
+                            .setColor(0xFF1493)
+                            .setTitle('❌ สร้าง Reward Code ไม่สำเร็จ')
+                            .setDescription(messages[error.message] || 'เกิดข้อผิดพลาดในการสร้าง Code')
+                            .setFooter({ text: 'GAKURAN • Reward System' })
+                    ],
                     ephemeral: true
                 });
             }
@@ -449,20 +466,27 @@ client.on('interactionCreate', async interaction => {
                         `Reward Code role sync failed for ${interaction.user.id}:`,
                         error.message
                     );
-                    roleWarning = '\n⚠️ ไม่สามารถอัปเดต Role อัตโนมัติได้';
+                    roleWarning = '⚠️ ไม่สามารถอัปเดต Role อัตโนมัติได้';
                 }
 
                 const rank = scoreService.class0f(result.after);
 
-                return interaction.reply({
-                    content:
-                        `✅ ใช้ Reward Code สำเร็จ\n` +
-                        `🎟️ Code: \`${result.code}\`\n` +
-                        `💰 ได้รับ: +${result.amount} คะแนน\n` +
-                        `📊 คะแนน: ${result.before} → ${result.after}\n` +
-                        `🏅 ชนชั้น: ${rank}` +
-                        roleWarning
-                });
+                const embed = new EmbedBuilder()
+                    .setColor(0xFF69B4)
+                    .setTitle('🎁 ใช้ Reward Code สำเร็จ')
+                    .addFields(
+                        { name: '🎟️ Code', value: `\`${result.code}\``, inline: true },
+                        { name: '💰 ได้รับ', value: `+${result.amount} คะแนน`, inline: true },
+                        { name: '📊 คะแนน', value: `${result.before} → ${result.after}`, inline: true },
+                        { name: '🏅 ชนชั้น', value: rank, inline: true }
+                    )
+                    .setFooter({ text: 'GAKURAN • Reward System' });
+
+                if (roleWarning) {
+                    embed.addFields({ name: '⚠️ แจ้งเตือน', value: roleWarning });
+                }
+
+                return interaction.reply({ embeds: [embed] });
             } catch (error) {
                 const messages = {
                     CODE_NOT_FOUND: 'ไม่พบ Reward Code นี้',
@@ -474,7 +498,13 @@ client.on('interactionCreate', async interaction => {
                 };
 
                 return interaction.reply({
-                    content: `❌ ${messages[error.message] || 'เกิดข้อผิดพลาดในการใช้ Code'}`,
+                    embeds: [
+                        new EmbedBuilder()
+                            .setColor(0xFF1493)
+                            .setTitle('❌ ไม่สามารถใช้ Reward Code')
+                            .setDescription(messages[error.message] || 'เกิดข้อผิดพลาดในการใช้ Code')
+                            .setFooter({ text: 'GAKURAN • Reward System' })
+                    ],
                     ephemeral: true
                 });
             }
@@ -483,7 +513,12 @@ client.on('interactionCreate', async interaction => {
         if (cmd === 'codes') {
             if (!isAdmin(interaction)) {
                 return interaction.reply({
-                    content: 'คำสั่งนี้ใช้ได้เฉพาะผู้ดูแลเซิร์ฟเวอร์เท่านั้น',
+                    embeds: [
+                        new EmbedBuilder()
+                            .setColor(0xFF1493)
+                            .setTitle('❌ ไม่มีสิทธิ์')
+                            .setDescription('คำสั่งนี้ใช้ได้เฉพาะผู้ดูแลเซิร์ฟเวอร์เท่านั้น')
+                    ],
                     ephemeral: true
                 });
             }
@@ -492,7 +527,13 @@ client.on('interactionCreate', async interaction => {
 
             if (!codes.length) {
                 return interaction.reply({
-                    content: '📭 ยังไม่มี Reward Code',
+                    embeds: [
+                        new EmbedBuilder()
+                            .setColor(0xFF69B4)
+                            .setTitle('🎟️ Reward Codes')
+                            .setDescription('📭 ยังไม่มี Reward Code')
+                            .setFooter({ text: 'GAKURAN • Reward System' })
+                    ],
                     ephemeral: true
                 });
             }
@@ -521,9 +562,13 @@ client.on('interactionCreate', async interaction => {
             });
 
             return interaction.reply({
-                content:
-                    `🎟️ **Reward Codes**\n` +
-                    lines.join('\n'),
+                embeds: [
+                    new EmbedBuilder()
+                        .setColor(0xFF69B4)
+                        .setTitle('🎟️ Reward Codes')
+                        .setDescription(lines.join('\n'))
+                        .setFooter({ text: 'GAKURAN • Reward System' })
+                ],
                 ephemeral: true
             });
         }
@@ -531,7 +576,12 @@ client.on('interactionCreate', async interaction => {
         if (cmd === 'disable-code') {
             if (!isAdmin(interaction)) {
                 return interaction.reply({
-                    content: 'คำสั่งนี้ใช้ได้เฉพาะผู้ดูแลเซิร์ฟเวอร์เท่านั้น',
+                    embeds: [
+                        new EmbedBuilder()
+                            .setColor(0xFF1493)
+                            .setTitle('❌ ไม่มีสิทธิ์')
+                            .setDescription('คำสั่งนี้ใช้ได้เฉพาะผู้ดูแลเซิร์ฟเวอร์เท่านั้น')
+                    ],
                     ephemeral: true
                 });
             }
@@ -542,9 +592,16 @@ client.on('interactionCreate', async interaction => {
                 const result = rewardCode.disableCode(code);
 
                 return interaction.reply({
-                    content:
-                        `✅ ปิด Reward Code สำเร็จ\n` +
-                        `🎟️ Code: \`${result.code}\``,
+                    embeds: [
+                        new EmbedBuilder()
+                            .setColor(0xFF69B4)
+                            .setTitle('🔒 ปิด Reward Code สำเร็จ')
+                            .addFields({
+                                name: '🎟️ Code',
+                                value: `\`${result.code}\``
+                            })
+                            .setFooter({ text: 'GAKURAN • Reward System' })
+                    ],
                     ephemeral: true
                 });
             } catch (error) {
@@ -553,7 +610,13 @@ client.on('interactionCreate', async interaction => {
                 };
 
                 return interaction.reply({
-                    content: `❌ ${messages[error.message] || 'เกิดข้อผิดพลาดในการปิด Code'}`,
+                    embeds: [
+                        new EmbedBuilder()
+                            .setColor(0xFF1493)
+                            .setTitle('❌ ปิด Reward Code ไม่สำเร็จ')
+                            .setDescription(messages[error.message] || 'เกิดข้อผิดพลาดในการปิด Code')
+                            .setFooter({ text: 'GAKURAN • Reward System' })
+                    ],
                     ephemeral: true
                 });
             }
