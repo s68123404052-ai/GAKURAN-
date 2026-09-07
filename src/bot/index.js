@@ -90,7 +90,7 @@ const commands = [
     new SlashCommandBuilder()
         .setName('decline')
         .setDescription('ปฏิเสธคำท้า')
-        .addStringOption(o =>
+        .addIntegerOption(o =>
             o.setName('id')
                 .setDescription('Challenge ID')
                 .setRequired(true)
@@ -1093,7 +1093,7 @@ if (cmd === 'challenge') {
 
 if (cmd === 'accept') {
   try {
-    const id = interaction.options.getString('id');
+    const id = interaction.options.getInteger('id');
 
     const result = challenge.acceptChallenge(
       String(id),
@@ -1320,7 +1320,11 @@ if (cmd === 'decline') {
             }
 
             return interaction.reply(
-                `📎 หลักฐาน Match ${code}\n${result.attachment_url || 'ไม่มีหลักฐาน'}`
+                `📎 หลักฐาน Match ${code}\n${
+                    result.length
+                        ? result.map(e => e.attachment_url).join('\n')
+                        : 'ไม่มีหลักฐาน'
+                }`
             );
         }
 
