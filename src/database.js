@@ -47,17 +47,23 @@ CREATE TABLE IF NOT EXISTS players (
  updated_at INTEGER NOT NULL
 );
 CREATE TABLE IF NOT EXISTS challenges (
- id INTEGER PRIMARY KEY AUTOINCREMENT,
- challenge_code TEXT NOT NULL UNIQUE,
- season_id INTEGER NOT NULL,
- challenger_id TEXT NOT NULL,
- target_id TEXT NOT NULL,
- status TEXT NOT NULL DEFAULT 'PENDING' CHECK(status IN ('PENDING','ACCEPTED','DECLINED','EXPIRED','CANCELLED')),
- decline_reason TEXT,
- reason TEXT,
- created_at INTEGER NOT NULL,
- expires_at INTEGER NOT NULL,
- accepted_at INTEGER
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  challenge_code TEXT NOT NULL UNIQUE,
+  season_id INTEGER NOT NULL,
+  challenger_id TEXT NOT NULL,
+  target_id TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'PENDING' CHECK(status IN ('PENDING','ACCEPTED','DECLINED','EXPIRED','CANCELLED')),
+  decline_reason TEXT,
+  reason TEXT,
+  tier_id INTEGER,
+  match_id INTEGER,
+  created_at INTEGER NOT NULL,
+  expires_at INTEGER NOT NULL,
+  resolved_at INTEGER,
+  FOREIGN KEY(season_id) REFERENCES seasons(id),
+  FOREIGN KEY(challenger_id) REFERENCES players(player_id),
+  FOREIGN KEY(target_id) REFERENCES players(player_id),
+  FOREIGN KEY(match_id) REFERENCES matches(id)
 );
 CREATE INDEX IF NOT EXISTS idx_challenges_pending ON challenges(status, expires_at);
 CREATE TABLE IF NOT EXISTS matches (
