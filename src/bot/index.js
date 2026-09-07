@@ -332,6 +332,11 @@ client.on('interactionCreate', async interaction => {
 
             for (const player of players) {
                 try {
+                    if (!/^\d{17,20}$/.test(String(player.discord_id))) {
+                        notInServer++;
+                        continue;
+                    }
+
                     const member = await interaction.guild.members.fetch(player.discord_id);
 
                     if (!member) {
