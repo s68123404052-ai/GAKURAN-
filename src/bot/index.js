@@ -291,6 +291,10 @@ const commands = [
         ),
 
     new SlashCommandBuilder()
+        .setName('admin-dashboard')
+        .setDescription('ดูภาพรวมระบบ GAKURAN (Admin)'),
+
+    new SlashCommandBuilder()
         .setName('admin-history')
         .setDescription('ดูประวัติการแก้คะแนนของ Admin (Admin)')
         .addIntegerOption(o =>
@@ -735,6 +739,56 @@ client.on('interactionCreate', async interaction => {
                         : 'ยังไม่มี Backup'
                 )
                 .setFooter({ text: `GAKURAN • Backup System • ${backups.length} file(s)` })
+                .setTimestamp()
+        ],
+        ephemeral: true
+    });
+}
+
+if (cmd === 'admin-dashboard') {
+    if (!isAdmin(interaction)) {
+        return interaction.reply({
+            embeds: [
+                new EmbedBuilder()
+                    .setColor(0xFF1493)
+                    .setTitle('❌ ไม่มีสิทธิ์')
+                    .setDescription('คำสั่งนี้ใช้ได้เฉพาะผู้ดูแลเซิร์ฟเวอร์เท่านั้น')
+            ],
+            ephemeral: true
+        });
+    }
+
+    const stats = db.prepare(`
+        SELECT
+            (SELECT COUNT(*) FROM players) AS players,
+            (SELECT COUNT(*) FROM matches) AS matches,
+            (SELECT COUNT(*) FROM audit_logs) AS audits,
+            (SELECT COUNT(*) FROM reward_codes WHERE disabled = 0) AS active_codes,
+            (SELECT COUNT(*) FROM score_logs) AS score_logs
+    `).get();
+
+    const top = db.prepare(`
+        SELECT display_name, score
+        FROM players
+        ORDER BY score DESC, id ASC
+        LIMIT 1
+    `).get();
+
+    return interaction.reply({
+        embeds: [
+            new EmbedBuilder()
+                .setColor(0xFF69B4)
+                .setTitle('🎛️ GAKURAN ADMIN DASHBOARD')
+                .setDescription('ภาพรวมระบบ GAKURAN')
+                .addFields(
+                    { name: '👥 PLAYERS', value: `**${stats.players}**`, inline: true },
+                    { name: '⚔️ MATCHES', value: `**${stats.matches}**`, inline: true },
+                    { name: '📋 AUDIT LOGS', value: `**${stats.audits}**`, inline: true },
+                    { name: '🎟️ ACTIVE CODES', value: `**${stats.active_codes}**`, inline: true },
+                    { name: '📊 SCORE LOGS', value: `**${stats.score_logs}**`, inline: true },
+                    { name: '🏆 TOP PLAYER', value: top ? `**${top.display_name}** — ${top.score} คะแนน` : '**ไม่มีข้อมูล**', inline: true }
+                )
+                .setFooter({ text: 'GAKURAN • ADMIN DASHBOARD' })
                 .setTimestamp()
         ],
         ephemeral: true
