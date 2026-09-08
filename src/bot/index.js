@@ -90,7 +90,7 @@ const commands = [
     new SlashCommandBuilder()
         .setName('decline')
         .setDescription('ปฏิเสธคำท้า')
-        .addIntegerOption(o =>
+        .addStringOption(o =>
             o.setName('id')
                 .setDescription('Challenge ID')
                 .setRequired(true)
