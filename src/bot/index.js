@@ -291,6 +291,15 @@ const commands = [
         ),
 
     new SlashCommandBuilder()
+        .setName('admin-player')
+        .setDescription('ดูข้อมูลผู้เล่นสำหรับ Admin')
+        .addUserOption(o =>
+            o.setName('player')
+                .setDescription('ผู้เล่นที่ต้องการดู')
+                .setRequired(true)
+        ),
+
+    new SlashCommandBuilder()
         .setName('admin-dashboard')
         .setDescription('ดูภาพรวมระบบ GAKURAN (Admin)'),
 
@@ -739,6 +748,65 @@ client.on('interactionCreate', async interaction => {
                         : 'ยังไม่มี Backup'
                 )
                 .setFooter({ text: `GAKURAN • Backup System • ${backups.length} file(s)` })
+                .setTimestamp()
+        ],
+        ephemeral: true
+    });
+}
+
+if (cmd === 'admin-player') {
+    if (!isAdmin(interaction)) {
+        return interaction.reply({
+            embeds: [
+                new EmbedBuilder()
+                    .setColor(0xFF1493)
+                    .setTitle('❌ ไม่มีสิทธิ์')
+                    .setDescription('คำสั่งนี้ใช้ได้เฉพาะผู้ดูแลเซิร์ฟเวอร์เท่านั้น')
+            ],
+            ephemeral: true
+        });
+    }
+
+    const user = interaction.options.getUser('player');
+
+    const player = db.prepare(`
+        SELECT display_name, discord_id, score, wins, losses, draws,
+               win_streak, created_at
+        FROM players
+        WHERE discord_id = ?
+        LIMIT 1
+    `).get(user.id);
+
+    if (!player) {
+        return interaction.reply({
+            embeds: [
+                new EmbedBuilder()
+                    .setColor(0xFF1493)
+                    .setTitle('❌ ไม่พบผู้เล่น')
+                    .setDescription(`ไม่พบข้อมูล <@${user.id}> ในระบบ GAKURAN`)
+            ],
+            ephemeral: true
+        });
+    }
+
+    const rank = scoreService.class0f(player.score);
+
+    return interaction.reply({
+        embeds: [
+            new EmbedBuilder()
+                .setColor(0xFF69B4)
+                .setTitle('👤 ADMIN PLAYER MANAGER')
+                .setDescription(`ข้อมูลผู้เล่น <@${player.discord_id}>`)
+                .addFields(
+                    { name: '🏷️ NAME', value: `**${player.display_name}**`, inline: true },
+                    { name: '💯 SCORE', value: `**${player.score}**`, inline: true },
+                    { name: '🏆 RANK', value: `**${rank}**`, inline: true },
+                    { name: '⚔️ WINS', value: `**${player.wins}**`, inline: true },
+                    { name: '💥 LOSSES', value: `**${player.losses}**`, inline: true },
+                    { name: '🤝 DRAWS', value: `**${player.draws}**`, inline: true },
+                    { name: '🔥 WIN STREAK', value: `**${player.win_streak}**`, inline: true }
+                )
+                .setFooter({ text: 'GAKURAN • ADMIN PLAYER MANAGER' })
                 .setTimestamp()
         ],
         ephemeral: true
