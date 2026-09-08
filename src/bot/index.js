@@ -13,6 +13,7 @@ const scoreService = require('../services/score.service');
 const bonus = require('../services/bonus.service');
 const discordRole = require('../services/discord-role.service');
 const rewardCode = require('../services/reward-code.service');
+const { createStudentCard } = require('../student-card');
 const { db } = require('../database');
 const TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID || '1545387353143640176';
@@ -249,6 +250,10 @@ const commands = [
                 .setDescription('ผู้เล่น')
                 .setRequired(false)
         ),
+
+    new SlashCommandBuilder()
+        .setName('student')
+        .setDescription('แสดง Student Card'),
 
     new SlashCommandBuilder()
         .setName('help')
@@ -924,6 +929,40 @@ return interaction.reply({
 
             return interaction.reply({
                 embeds: [embed]
+            });
+        }
+
+        if (cmd === 'student') {
+            const id = interaction.user.id;
+            const player = challenge.getPlayer(id);
+
+            if (!player) {
+                const embed = new EmbedBuilder()
+                    .setColor('#FF1493')
+                    .setTitle('❌ ไม่พบข้อมูลผู้เล่น')
+                    .setDescription('กรุณาใช้ `/register` ก่อนสร้าง Student Card');
+                return interaction.reply({ embeds: [embed], ephemeral: true });
+            }
+
+            const rank = scoreService.class0f(player.score);
+
+            const buffer = await createStudentCard({
+                guildName: interaction.guild?.name || 'GAKURAN',
+                guildIcon: interaction.guild?.iconURL({ extension: 'png', size: 128 }),
+                avatar: interaction.user.displayAvatarURL({ extension: 'png', size: 256 }),
+                studentName: player.display_name,
+                discordId: player.discord_id,
+                score: player.score,
+                rank
+            });
+
+            return interaction.reply({
+                files: [
+                    {
+                        attachment: buffer,
+                        name: 'student-card.png'
+                    }
+                ]
             });
         }
 

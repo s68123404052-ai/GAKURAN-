@@ -1,4 +1,5 @@
 const { createCanvas, loadImage } = require('@napi-rs/canvas');
+const QRCode = require('qrcode');
 
 async function loadImageSafe(url) {
     if (!url) return null;
@@ -23,6 +24,14 @@ async function createStudentCard({
 }) {
     const canvas = createCanvas(1200, 675);
     const ctx = canvas.getContext('2d');
+
+    const qrData = `GAKURAN:STUDENT:${discordId}`;
+    const qrBuffer = await QRCode.toBuffer(qrData, {
+        type: 'png',
+        width: 150,
+        margin: 1
+    });
+    const qrImg = await loadImage(qrBuffer);
 
     const bg = ctx.createLinearGradient(0, 0, 1200, 675);
     bg.addColorStop(0, '#111827');
@@ -98,6 +107,11 @@ async function createStudentCard({
     drawStat(ctx, 'CLASS', String(rank), 650, 455);
     drawStat(ctx, 'STATUS', String(status), 390, 555);
     drawStat(ctx, 'SEASON', String(season), 650, 555);
+
+    // QR Code
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(960, 435, 170, 170);
+    ctx.drawImage(qrImg, 970, 445, 150, 150);
 
     // Footer
     ctx.fillStyle = '#64748b';
