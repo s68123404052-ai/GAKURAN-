@@ -319,7 +319,7 @@ function formatPlayer(player) {
   ].join('\\n');
 }
 
-client.once('ready', () => {
+client.once('clientReady', () => {
     console.log(`Discord Bot Online: ${client.user.tag}`);
 });
 
