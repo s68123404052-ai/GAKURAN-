@@ -291,6 +291,17 @@ const commands = [
         ),
 
     new SlashCommandBuilder()
+        .setName('admin-history')
+        .setDescription('ดูประวัติการแก้คะแนนของ Admin (Admin)')
+        .addIntegerOption(o =>
+            o.setName('limit')
+                .setDescription('จำนวนรายการ')
+                .setMinValue(1)
+                .setMaxValue(10)
+                .setRequired(false)
+        ),
+
+    new SlashCommandBuilder()
         .setName('codes')
         .setDescription('ดู Reward Codes ทั้งหมด (Admin)'),
 
@@ -724,6 +735,51 @@ client.on('interactionCreate', async interaction => {
                         : 'ยังไม่มี Backup'
                 )
                 .setFooter({ text: `GAKURAN • Backup System • ${backups.length} file(s)` })
+                .setTimestamp()
+        ],
+        ephemeral: true
+    });
+}
+
+if (cmd === 'admin-history') {
+    if (!isAdmin(interaction)) {
+        return interaction.reply({
+            embeds: [
+                new EmbedBuilder()
+                    .setColor(0xFF1493)
+                    .setTitle('❌ ไม่มีสิทธิ์')
+                    .setDescription('คำสั่งนี้ใช้ได้เฉพาะผู้ดูแลเซิร์ฟเวอร์เท่านั้น')
+            ],
+            ephemeral: true
+        });
+    }
+
+    const limit = interaction.options.getInteger('limit') ?? 10;
+
+    const rows = db.prepare(`
+        SELECT action, target_id, reason, transaction_id, created_at
+        FROM audit_logs
+        WHERE action IN ('ADMIN_SCORE_CHANGE', 'ADMIN_SCORE_SET')
+        ORDER BY id DESC
+        LIMIT ?
+    `).all(limit);
+
+    const description = rows.length
+        ? rows.map((row, i) =>
+            `**${i + 1}. ${row.action}**\n` +
+            `👤 Target: <@${row.target_id}>\n` +
+            `📝 ${row.reason}\n` +
+            `🔑 \`${row.transaction_id}\``
+        ).join('\n\n')
+        : 'ยังไม่มีประวัติการแก้คะแนน';
+
+    return interaction.reply({
+        embeds: [
+            new EmbedBuilder()
+                .setColor(0xFF69B4)
+                .setTitle('📋 ADMIN SCORE HISTORY')
+                .setDescription(description)
+                .setFooter({ text: `GAKURAN • Admin History • ${rows.length} record(s)` })
                 .setTimestamp()
         ],
         ephemeral: true
