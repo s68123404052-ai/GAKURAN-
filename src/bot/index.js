@@ -282,6 +282,15 @@ const commands = [
         .setDescription('ดูรายการ Database Backup (Admin)'),
 
     new SlashCommandBuilder()
+        .setName('restore')
+        .setDescription('กู้คืน Database จาก Backup (Admin)')
+        .addStringOption(o =>
+            o.setName('file')
+                .setDescription('ชื่อไฟล์ Backup')
+                .setRequired(true)
+        ),
+
+    new SlashCommandBuilder()
         .setName('codes')
         .setDescription('ดู Reward Codes ทั้งหมด (Admin)'),
 
@@ -719,6 +728,57 @@ client.on('interactionCreate', async interaction => {
         ],
         ephemeral: true
     });
+}
+
+if (cmd === 'restore') {
+    if (!isAdmin(interaction)) {
+        return interaction.reply({
+            embeds: [
+                new EmbedBuilder()
+                    .setColor(0xFF1493)
+                    .setTitle('❌ ไม่มีสิทธิ์')
+                    .setDescription('คำสั่งนี้ใช้ได้เฉพาะผู้ดูแลเซิร์ฟเวอร์เท่านั้น')
+            ],
+            ephemeral: true
+        });
+    }
+
+    const file = interaction.options.getString('file', true);
+
+    await interaction.deferReply({ ephemeral: true });
+
+    try {
+        await backupService.createBackup('pre-restore');
+
+        const result = await backupService.restoreBackup(
+            file,
+            require('path').join(__dirname, '..', '..', 'data', 'gakuran-restored.sqlite')
+        );
+
+        return interaction.editReply({
+            embeds: [
+                new EmbedBuilder()
+                    .setColor(0xFF69B4)
+                    .setTitle('🔄 RESTORE สำเร็จ')
+                    .setDescription('กู้คืน Database จาก Backup เรียบร้อยแล้ว')
+                    .addFields(
+                        {
+                            name: '📁 Backup',
+                            value: `\`${file}\``
+                        },
+                        {
+                            name: '💾 Restore File',
+                            value: `\`${result.destination}\``
+                        }
+                    )
+                    .setFooter({ text: 'GAKURAN • Backup System' })
+                    .setTimestamp()
+            ]
+        });
+    } catch (error) {
+        console.error('RESTORE ERROR:', error);
+        throw error;
+    }
 }
 
 if (cmd === 'backup') {
