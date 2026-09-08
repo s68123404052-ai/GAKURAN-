@@ -256,6 +256,17 @@ const commands = [
         .setDescription('แสดง Student Card'),
 
     new SlashCommandBuilder()
+        .setName('verify-student')
+        .setDescription('ตรวจสอบ Student ID')
+        .addStringOption(o =>
+            o.setName('id')
+                .setDescription('Discord ID ของนักเรียน')
+                .setRequired(true)
+        ),
+
+
+
+    new SlashCommandBuilder()
         .setName('help')
         .setDescription('คู่มือการใช้งาน GAKURAN'),
 
@@ -963,6 +974,71 @@ return interaction.reply({
                         name: 'student-card.png'
                     }
                 ]
+            });
+        }
+
+        if (cmd === 'verify-student') {
+            const studentId = interaction.options.getString('id');
+            const player = challenge.getPlayer(studentId);
+
+            if (!player) {
+                const embed = new EmbedBuilder()
+                    .setColor('#FF1493')
+                    .setTitle('❌ STUDENT NOT FOUND')
+                    .setDescription('ไม่พบ Student ID นี้ในระบบ GAKURAN')
+                    .addFields({
+                        name: 'STUDENT ID',
+                        value: `\`${studentId}\``,
+                        inline: false
+                    })
+                    .setFooter({ text: 'GAKURAN ACADEMY • STUDENT VERIFICATION' })
+                    .setTimestamp();
+
+                return interaction.reply({
+                    embeds: [embed],
+                    ephemeral: true
+                });
+            }
+
+            const rank = scoreService.class0f(player.score);
+
+            const embed = new EmbedBuilder()
+                .setColor('#e8a0bf')
+                .setAuthor({ name: 'GAKURAN ACADEMY' })
+                .setTitle('🎓 STUDENT VERIFIED')
+                .setDescription('พบข้อมูลนักเรียนในระบบ GAKURAN แล้ว')
+                .addFields(
+                    {
+                        name: '👤 STUDENT',
+                        value: `**${player.display_name}**`,
+                        inline: true
+                    },
+                    {
+                        name: '🪪 STUDENT ID',
+                        value: `\`${player.discord_id}\``,
+                        inline: true
+                    },
+                    {
+                        name: '💰 SCORE',
+                        value: `**${player.score}**`,
+                        inline: true
+                    },
+                    {
+                        name: '🏅 CLASS',
+                        value: `**${rank}**`,
+                        inline: true
+                    },
+                    {
+                        name: '🟢 STATUS',
+                        value: '**ACTIVE**',
+                        inline: true
+                    }
+                )
+                .setFooter({ text: 'GAKURAN ACADEMY • OFFICIAL STUDENT VERIFICATION' })
+                .setTimestamp();
+
+            return interaction.reply({
+                embeds: [embed]
             });
         }
 
