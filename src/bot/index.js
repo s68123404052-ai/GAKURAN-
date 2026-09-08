@@ -11,6 +11,7 @@ const challenge = require('../services/challenge.service');
 const match = require('../services/match.service');
 const scoreService = require('../services/score.service');
 const adminScore = require('../services/admin-score.service');
+const backupService = require('../services/backup.service');
 const bonus = require('../services/bonus.service');
 const discordRole = require('../services/discord-role.service');
 const rewardCode = require('../services/reward-code.service');
@@ -271,6 +272,14 @@ const commands = [
                 .setDescription('เหตุผล')
                 .setRequired(true)
         ),
+
+    new SlashCommandBuilder()
+        .setName('backup')
+        .setDescription('สร้าง Database Backup (Admin)'),
+
+    new SlashCommandBuilder()
+        .setName('backups')
+        .setDescription('ดูรายการ Database Backup (Admin)'),
 
     new SlashCommandBuilder()
         .setName('codes')
@@ -676,6 +685,76 @@ client.on('interactionCreate', async interaction => {
                     ephemeral: true
                 });
             } catch (error) {
+                throw error;
+            }
+        }
+
+        if (cmd === 'backups') {
+    if (!isAdmin(interaction)) {
+        return interaction.reply({
+            embeds: [
+                new EmbedBuilder()
+                    .setColor(0xFF1493)
+                    .setTitle('❌ ไม่มีสิทธิ์')
+                    .setDescription('คำสั่งนี้ใช้ได้เฉพาะผู้ดูแลเซิร์ฟเวอร์เท่านั้น')
+            ],
+            ephemeral: true
+        });
+    }
+
+    const backups = backupService.listBackups();
+
+    return interaction.reply({
+        embeds: [
+            new EmbedBuilder()
+                .setColor(0xFF69B4)
+                .setTitle('📂 GAKURAN BACKUPS')
+                .setDescription(
+                    backups.length
+                        ? backups.map((file, i) => `**${i + 1}.** \`${file}\``).join('\n')
+                        : 'ยังไม่มี Backup'
+                )
+                .setFooter({ text: `GAKURAN • Backup System • ${backups.length} file(s)` })
+                .setTimestamp()
+        ],
+        ephemeral: true
+    });
+}
+
+if (cmd === 'backup') {
+            if (!isAdmin(interaction)) {
+                return interaction.reply({
+                    embeds: [
+                        new EmbedBuilder()
+                            .setColor(0xFF1493)
+                            .setTitle('❌ ไม่มีสิทธิ์')
+                            .setDescription('คำสั่งนี้ใช้ได้เฉพาะผู้ดูแลเซิร์ฟเวอร์เท่านั้น')
+                    ],
+                    ephemeral: true
+                });
+            }
+
+            await interaction.deferReply({ ephemeral: true });
+
+            try {
+                const result = await backupService.createBackup('admin');
+
+                return interaction.editReply({
+                    embeds: [
+                        new EmbedBuilder()
+                            .setColor(0xFF69B4)
+                            .setTitle('💾 BACKUP สำเร็จ')
+                            .setDescription('สร้าง Database Backup เรียบร้อยแล้ว')
+                            .addFields({
+                                name: '📁 ไฟล์',
+                                value: `\`${result.filename}\``
+                            })
+                            .setFooter({ text: 'GAKURAN • Backup System' })
+                            .setTimestamp()
+                    ]
+                });
+            } catch (error) {
+                console.error('BACKUP ERROR:', error);
                 throw error;
             }
         }
