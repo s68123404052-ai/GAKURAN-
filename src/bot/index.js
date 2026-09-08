@@ -1281,13 +1281,6 @@ if (cmd === 'challenge') {
     const target = interaction.options.getUser('user');
     const reason = interaction.options.getString('reason') || null;
 
-    console.log('DEBUG CHALLENGE:', {
-      caller: interaction.user.id,
-      target: target?.id,
-      callerName: interaction.user.username,
-      targetName: target?.username
-    });
-
     if (target.id === interaction.user.id) {
       return interaction.reply({
         embeds: [
