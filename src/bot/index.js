@@ -1789,9 +1789,20 @@ if (cmd === 'decline') {
             const code = interaction.options.getString('code');
             const result = match.result(code, 'DRAW');
 
-            return interaction.reply(
-                `🤝 Match ${code} เป็นผลเสมอแล้ว\nสถานะ: ${result.status}`
-            );
+            return interaction.reply({
+                embeds: [
+                    new EmbedBuilder()
+                        .setColor('#e8a0bf')
+                        .setTitle('🤝 MATCH DRAW')
+                        .setDescription(`Match **${code}** เป็นผลเสมอแล้ว`)
+                        .addFields({
+                            name: '📌 STATUS',
+                            value: `**${result.status}**`
+                        })
+                        .setFooter({ text: 'GAKURAN ACADEMY • MATCH SYSTEM' })
+                        .setTimestamp()
+                ]
+            });
         }
 
         if (cmd === 'cancel') {
@@ -1816,9 +1827,20 @@ if (cmd === 'decline') {
                 'Cancelled by Administrator'
             );
 
-            return interaction.reply(
-                `🚫 Match ${code} ถูกยกเลิกแล้ว\nสถานะ: ${result.status}`
-            );
+            return interaction.reply({
+                embeds: [
+                    new EmbedBuilder()
+                        .setColor('#e8a0bf')
+                        .setTitle('🚫 MATCH CANCELLED')
+                        .setDescription(`Match **${code}** ถูกยกเลิกแล้ว`)
+                        .addFields({
+                            name: '📌 STATUS',
+                            value: `**${result.status}**`
+                        })
+                        .setFooter({ text: 'GAKURAN ACADEMY • MATCH SYSTEM' })
+                        .setTimestamp()
+                ]
+            });
         }
 
     } catch (error) {
