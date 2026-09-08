@@ -316,7 +316,13 @@ client.on('interactionCreate', async interaction => {
         if (cmd === 'sync-ranks') {
             if (!isAdmin(interaction)) {
                 return interaction.reply({
-                    content: 'คำสั่งนี้ใช้ได้เฉพาะผู้ดูแลเซิร์ฟเวอร์เท่านั้น',
+                    embeds: [
+                        new EmbedBuilder()
+                            .setColor(0xFF1493)
+                            .setTitle('❌ ไม่มีสิทธิ์')
+                            .setDescription('คำสั่งนี้ใช้ได้เฉพาะผู้ดูแลเซิร์ฟเวอร์เท่านั้น')
+                            .setFooter({ text: 'GAKURAN • System' })
+                    ],
                     ephemeral: true
                 });
             }
@@ -627,7 +633,13 @@ client.on('interactionCreate', async interaction => {
 const player = challenge.ensurePlayer({ discordId: interaction.user.id, displayName: interaction.user.username });
 
 return interaction.reply({
-                content: `ลงทะเบียนสำเร็จ\n${formatPlayer(player)}`
+                embeds: [
+                    new EmbedBuilder()
+                        .setColor(0xFF69B4)
+                        .setTitle('📝 ลงทะเบียนสำเร็จ')
+                        .setDescription(formatPlayer(player))
+                        .setFooter({ text: 'GAKURAN • System' })
+                ]
             });
         }
 
@@ -637,20 +649,38 @@ return interaction.reply({
 
             if (!player) {
                 return interaction.reply({
-                    content: 'ยังไม่ได้ลงทะเบียน',
+                    embeds: [
+                        new EmbedBuilder()
+                            .setColor(0xFF1493)
+                            .setTitle('❌ ยังไม่ได้ลงทะเบียน')
+                            .setDescription('กรุณาใช้ `/register` ก่อน')
+                            .setFooter({ text: 'GAKURAN • System' })
+                    ],
                     ephemeral: true
                 });
             }
 
             return interaction.reply({
-                content: formatPlayer(player)
+                embeds: [
+                    new EmbedBuilder()
+                        .setColor('#e8a0bf')
+                        .setTitle('📊 ข้อมูลคะแนน')
+                        .setDescription(formatPlayer(player))
+                        .setFooter({ text: 'GAKURAN • System' })
+                ]
             });
         }
 
         if (cmd === 'event-reward') {
           if (!isAdmin(interaction)) {
             return interaction.reply({
-              content: '❌ เฉพาะ Administrator เท่านั้น',
+              embeds: [
+                new EmbedBuilder()
+                  .setColor(0xFF1493)
+                  .setTitle('❌ ไม่มีสิทธิ์')
+                  .setDescription('คำสั่งนี้ใช้ได้เฉพาะ Administrator เท่านั้น')
+                  .setFooter({ text: 'GAKURAN • System' })
+              ],
               ephemeral: true
             });
           }
@@ -668,7 +698,13 @@ return interaction.reply({
           const amount = amounts[type];
           if (!amount) {
             return interaction.reply({
-              content: '❌ ประเภทโบนัสไม่ถูกต้อง',
+              embeds: [
+                new EmbedBuilder()
+                  .setColor(0xFF1493)
+                  .setTitle('❌ ประเภทโบนัสไม่ถูกต้อง')
+                  .setDescription('กรุณาเลือกประเภทโบนัสที่ระบบรองรับ')
+                  .setFooter({ text: 'GAKURAN • Event Reward' })
+              ],
               ephemeral: true
             });
           }
@@ -677,7 +713,13 @@ return interaction.reply({
 
           if (!player) {
             return interaction.reply({
-              content: '❌ ผู้เล่นยังไม่ได้ลงทะเบียน',
+              embeds: [
+                new EmbedBuilder()
+                  .setColor(0xFF1493)
+                  .setTitle('❌ ผู้เล่นยังไม่ได้ลงทะเบียน')
+                  .setDescription('ผู้เล่นคนนี้ต้องใช้ `/register` ก่อน')
+                  .setFooter({ text: 'GAKURAN • Event Reward' })
+              ],
               ephemeral: true
             });
           }
@@ -688,7 +730,13 @@ return interaction.reply({
 
           if (exists) {
             return interaction.reply({
-              content: '❌ ผู้เล่นได้รับโบนัสประเภทนี้ใน Event นี้ไปแล้ว',
+              embeds: [
+                new EmbedBuilder()
+                  .setColor(0xFF1493)
+                  .setTitle('❌ รับโบนัสซ้ำไม่ได้')
+                  .setDescription('ผู้เล่นได้รับโบนัสประเภทนี้ใน Event นี้ไปแล้ว')
+                  .setFooter({ text: 'GAKURAN • Event Reward' })
+              ],
               ephemeral: true
             });
           }
@@ -734,7 +782,13 @@ return interaction.reply({
 
           if (!result.claimed) {
             return interaction.reply({
-              content: '❌ คุณรับ Daily Login ไปแล้ววันนี้',
+              embeds: [
+                new EmbedBuilder()
+                  .setColor(0xFF1493)
+                  .setTitle('❌ รับ Daily Login แล้ว')
+                  .setDescription('คุณได้รับ Daily Login ของวันนี้ไปแล้ว')
+                  .setFooter({ text: 'GAKURAN • Daily Reward' })
+              ],
               ephemeral: true
             });
           }
@@ -767,7 +821,13 @@ return interaction.reply({
 
             if (!player) {
                 return interaction.reply({
-                    content: 'ยังไม่ได้ลงทะเบียน',
+                    embeds: [
+                        new EmbedBuilder()
+                            .setColor(0xFF1493)
+                            .setTitle('❌ ยังไม่ได้ลงทะเบียน')
+                            .setDescription('กรุณาใช้ `/register` ก่อน')
+                            .setFooter({ text: 'GAKURAN • System' })
+                    ],
                     ephemeral: true
                 });
             }
@@ -942,7 +1002,13 @@ return interaction.reply({
 
             if (!rows.length) {
                 return interaction.reply({
-                    content: '📭 ยังไม่มีผู้เล่นใน Ranking',
+                    embeds: [
+                        new EmbedBuilder()
+                            .setColor(0xFF1493)
+                            .setTitle('📭 Ranking ว่าง')
+                            .setDescription('ยังไม่มีผู้เล่นใน Ranking')
+                            .setFooter({ text: 'GAKURAN • System' })
+                    ],
                     ephemeral: true
                 });
             }
@@ -987,7 +1053,13 @@ return interaction.reply({
 
             if (!player) {
                 return interaction.reply({
-                    content: 'ยังไม่ได้ลงทะเบียน',
+                    embeds: [
+                        new EmbedBuilder()
+                            .setColor(0xFF1493)
+                            .setTitle('❌ ยังไม่ได้ลงทะเบียน')
+                            .setDescription('กรุณาใช้ `/register` ก่อน')
+                            .setFooter({ text: 'GAKURAN • System' })
+                    ],
                     ephemeral: true
                 });
             }
@@ -1014,7 +1086,13 @@ return interaction.reply({
 
             if (!rows.length) {
                 return interaction.reply({
-                    content: '📭 ยังไม่มีประวัติการแข่งขัน',
+                    embeds: [
+                        new EmbedBuilder()
+                            .setColor(0xFF1493)
+                            .setTitle('📭 ยังไม่มีประวัติการแข่งขัน')
+                            .setDescription('ยังไม่มี Match History สำหรับผู้เล่นคนนี้')
+                            .setFooter({ text: 'GAKURAN • Match History' })
+                    ],
                     ephemeral: true
                 });
             }
@@ -1097,7 +1175,13 @@ if (cmd === 'challenge') {
 
     if (target.id === interaction.user.id) {
       return interaction.reply({
-        content: 'ไม่สามารถท้าตัวเองได้',
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xFF1493)
+            .setTitle('❌ ไม่สามารถท้าตัวเองได้')
+            .setDescription('คุณไม่สามารถสร้าง Challenge กับตัวเองได้')
+            .setFooter({ text: 'GAKURAN • Challenge System' })
+        ],
         ephemeral: true
       });
     }
@@ -1148,7 +1232,13 @@ if (cmd === 'challenge') {
     console.error('CHALLENGE ERROR:', error);
 
     return interaction.reply({
-      content: `ไม่สามารถดำเนินการได้: ${error.message}`,
+      embeds: [
+        new EmbedBuilder()
+          .setColor(0xFF1493)
+          .setTitle('❌ ไม่สามารถดำเนินการได้')
+          .setDescription(error.message)
+          .setFooter({ text: 'GAKURAN • Challenge System' })
+      ],
       ephemeral: true
     });
   }
@@ -1203,7 +1293,13 @@ if (cmd === 'accept') {
     console.error('ACCEPT ERROR:', error);
 
     return interaction.reply({
-      content: `ไม่สามารถดำเนินการได้: ${error.message}`,
+      embeds: [
+        new EmbedBuilder()
+          .setColor(0xFF1493)
+          .setTitle('❌ ไม่สามารถดำเนินการได้')
+          .setDescription(error.message)
+          .setFooter({ text: 'GAKURAN • Challenge System' })
+      ],
       ephemeral: true
     });
   }
@@ -1250,7 +1346,13 @@ if (cmd === 'decline') {
     console.error('DECLINE ERROR:', error);
 
     return interaction.reply({
-      content: `ไม่สามารถดำเนินการได้: ${error.message}`,
+      embeds: [
+        new EmbedBuilder()
+          .setColor(0xFF1493)
+          .setTitle('❌ ไม่สามารถดำเนินการได้')
+          .setDescription(error.message)
+          .setFooter({ text: 'GAKURAN • Challenge System' })
+      ],
       ephemeral: true
     });
   }
@@ -1264,9 +1366,20 @@ if (cmd === 'decline') {
                 interaction.user.id
             );
 
-            return interaction.reply(
-                `▶️ Match ${code} เริ่มแล้ว\nสถานะ: ${result.status}`
-            );
+            return interaction.reply({
+                embeds: [
+                    new EmbedBuilder()
+                        .setColor('#e8a0bf')
+                        .setTitle('▶️ MATCH STARTED')
+                        .setDescription('การแข่งขันเริ่มต้นแล้ว')
+                        .addFields(
+                            { name: '⚔️ MATCH', value: `**${code}**`, inline: true },
+                            { name: '📌 STATUS', value: `**${result.status}**`, inline: true }
+                        )
+                        .setFooter({ text: 'GAKURAN ACADEMY • MATCH SYSTEM' })
+                        .setTimestamp()
+                ]
+            });
         }
 
         if (cmd === 'submit') {
@@ -1279,15 +1392,32 @@ if (cmd === 'decline') {
                 attachment.url
             );
 
-            return interaction.reply(
-                `📎 ส่งหลักฐานแล้ว\nMatch: ${code}\nสถานะ: ${result.status}`
-            );
+            return interaction.reply({
+                embeds: [
+                    new EmbedBuilder()
+                        .setColor('#e8a0bf')
+                        .setTitle('📎 EVIDENCE SUBMITTED')
+                        .setDescription('ส่งหลักฐานการแข่งขันเรียบร้อยแล้ว')
+                        .addFields(
+                            { name: '⚔️ MATCH', value: `**${code}**`, inline: true },
+                            { name: '📌 STATUS', value: `**${result.status}**`, inline: true }
+                        )
+                        .setFooter({ text: 'GAKURAN ACADEMY • EVIDENCE SYSTEM' })
+                        .setTimestamp()
+                ]
+            });
         }
 
         if (cmd === 'verify') {
             if (!isAdmin(interaction)) {
                 return interaction.reply({
-                    content: 'คำสั่งนี้ใช้ได้เฉพาะผู้ดูแลเซิร์ฟเวอร์เท่านั้น',
+                    embeds: [
+                        new EmbedBuilder()
+                            .setColor(0xFF1493)
+                            .setTitle('❌ ไม่มีสิทธิ์')
+                            .setDescription('คำสั่งนี้ใช้ได้เฉพาะผู้ดูแลเซิร์ฟเวอร์เท่านั้น')
+                            .setFooter({ text: 'GAKURAN • System' })
+                    ],
                     ephemeral: true
                 });
             }
@@ -1311,9 +1441,20 @@ if (cmd === 'decline') {
                 await discordRole.syncRole(loserMember, loserAfter);
             }
 
-            return interaction.reply(
-                `✅ ยืนยันผล Match ${code} แล้ว\nสถานะ: ${result.status}`
-            );
+            return interaction.reply({
+                embeds: [
+                    new EmbedBuilder()
+                        .setColor('#e8a0bf')
+                        .setTitle('✅ MATCH VERIFIED')
+                        .setDescription('ยืนยันผลการแข่งขันเรียบร้อยแล้ว')
+                        .addFields(
+                            { name: '⚔️ MATCH', value: `**${code}**`, inline: true },
+                            { name: '📌 STATUS', value: `**${result.status}**`, inline: true }
+                        )
+                        .setFooter({ text: 'GAKURAN ACADEMY • VERIFY SYSTEM' })
+                        .setTimestamp()
+                ]
+            });
         }
 
         if (cmd === 'rank') {
@@ -1361,14 +1502,32 @@ if (cmd === 'decline') {
 
             if (!result) {
                 return interaction.reply({
-                    content: 'ไม่พบ Match นี้',
+                    embeds: [
+                        new EmbedBuilder()
+                            .setColor(0xFF1493)
+                            .setTitle('❌ ไม่พบ Match')
+                            .setDescription(`ไม่พบ Match **${code}** ในระบบ`)
+                            .setFooter({ text: 'GAKURAN • Match System' })
+                    ],
                     ephemeral: true
                 });
             }
 
-            return interaction.reply(
-                `⚔️ Match ${code}\nสถานะ: ${result.status}\nผู้เล่น A: ${result.player_a_id}\nผู้เล่น B: ${result.player_b_id}`
-            );
+            return interaction.reply({
+                embeds: [
+                    new EmbedBuilder()
+                        .setColor('#e8a0bf')
+                        .setTitle('⚔️ MATCH INFORMATION')
+                        .setDescription(`ข้อมูล Match **${code}**`)
+                        .addFields(
+                            { name: '📌 STATUS', value: `**${result.status}**`, inline: false },
+                            { name: '👤 PLAYER A', value: `<@${result.player_a_id}>`, inline: true },
+                            { name: '👤 PLAYER B', value: `<@${result.player_b_id}>`, inline: true }
+                        )
+                        .setFooter({ text: 'GAKURAN ACADEMY • MATCH SYSTEM' })
+                        .setTimestamp()
+                ]
+            });
         }
 
         if (cmd === 'evidence') {
@@ -1377,18 +1536,33 @@ if (cmd === 'decline') {
 
             if (!result) {
                 return interaction.reply({
-                    content: 'ไม่พบหลักฐาน',
+                    embeds: [
+                        new EmbedBuilder()
+                            .setColor(0xFF1493)
+                            .setTitle('❌ ไม่พบหลักฐาน')
+                            .setDescription(`ไม่พบหลักฐานสำหรับ Match **${code}**`)
+                            .setFooter({ text: 'GAKURAN • Evidence System' })
+                    ],
                     ephemeral: true
                 });
             }
 
-            return interaction.reply(
-                `📎 หลักฐาน Match ${code}\n${
-                    result.length
-                        ? result.map(e => e.attachment_url).join('\n')
-                        : 'ไม่มีหลักฐาน'
-                }`
-            );
+            return interaction.reply({
+                embeds: [
+                    new EmbedBuilder()
+                        .setColor('#e8a0bf')
+                        .setTitle('📎 MATCH EVIDENCE')
+                        .setDescription(`หลักฐานของ Match **${code}**`)
+                        .addFields({
+                            name: '📁 EVIDENCE',
+                            value: result.length
+                                ? result.map((e, i) => `**${i + 1}.** ${e.attachment_url}`).join('\n')
+                                : 'ไม่มีหลักฐาน'
+                        })
+                        .setFooter({ text: 'GAKURAN ACADEMY • EVIDENCE SYSTEM' })
+                        .setTimestamp()
+                ]
+            });
         }
 
         if (cmd === 'stats') {
@@ -1397,7 +1571,13 @@ if (cmd === 'decline') {
 
             if (!player) {
                 return interaction.reply({
-                    content: 'ยังไม่ได้ลงทะเบียน',
+                    embeds: [
+                        new EmbedBuilder()
+                            .setColor(0xFF1493)
+                            .setTitle('❌ ยังไม่ได้ลงทะเบียน')
+                            .setDescription('กรุณาใช้ `/register` ก่อน')
+                            .setFooter({ text: 'GAKURAN • System' })
+                    ],
                     ephemeral: true
                 });
             }
@@ -1480,7 +1660,13 @@ if (cmd === 'decline') {
         if (cmd === 'draw') {
             if (!isAdmin(interaction)) {
                 return interaction.reply({
-                    content: 'คำสั่งนี้ใช้ได้เฉพาะผู้ดูแลเซิร์ฟเวอร์เท่านั้น',
+                    embeds: [
+                        new EmbedBuilder()
+                            .setColor(0xFF1493)
+                            .setTitle('❌ ไม่มีสิทธิ์')
+                            .setDescription('คำสั่งนี้ใช้ได้เฉพาะผู้ดูแลเซิร์ฟเวอร์เท่านั้น')
+                            .setFooter({ text: 'GAKURAN • System' })
+                    ],
                     ephemeral: true
                 });
             }
@@ -1496,7 +1682,13 @@ if (cmd === 'decline') {
         if (cmd === 'cancel') {
             if (!isAdmin(interaction)) {
                 return interaction.reply({
-                    content: 'คำสั่งนี้ใช้ได้เฉพาะผู้ดูแลเซิร์ฟเวอร์เท่านั้น',
+                    embeds: [
+                        new EmbedBuilder()
+                            .setColor(0xFF1493)
+                            .setTitle('❌ ไม่มีสิทธิ์')
+                            .setDescription('คำสั่งนี้ใช้ได้เฉพาะผู้ดูแลเซิร์ฟเวอร์เท่านั้น')
+                            .setFooter({ text: 'GAKURAN • System' })
+                    ],
                     ephemeral: true
                 });
             }
@@ -1521,13 +1713,25 @@ if (cmd === 'decline') {
 
         if (interaction.replied || interaction.deferred) {
             return interaction.followUp({
-                content: message,
+                embeds: [
+                    new EmbedBuilder()
+                        .setColor(0xFF1493)
+                        .setTitle('❌ ไม่สามารถดำเนินการได้')
+                        .setDescription(message)
+                        .setFooter({ text: 'GAKURAN • System' })
+                ],
                 ephemeral: true
             });
         }
 
         return interaction.reply({
-            content: message,
+            embeds: [
+                new EmbedBuilder()
+                    .setColor(0xFF1493)
+                    .setTitle('❌ ไม่สามารถดำเนินการได้')
+                    .setDescription(message)
+                    .setFooter({ text: 'GAKURAN • System' })
+            ],
             ephemeral: true
         });
     }
