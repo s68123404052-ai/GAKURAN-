@@ -4,7 +4,9 @@
   "private": true,
   "type": "commonjs",
   "scripts": {
-    "start": "node src/demo.js"
+    "start": "node src/bot/index.js",
+    "demo": "node src/demo.js",
+    "web": "node src/web.js"
   },
   "dependencies": {
     "@napi-rs/canvas": "^1.0.8",
