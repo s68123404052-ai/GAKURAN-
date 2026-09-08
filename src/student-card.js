@@ -25,7 +25,7 @@ async function createStudentCard({
     const canvas = createCanvas(1200, 675);
     const ctx = canvas.getContext('2d');
 
-    const qrData = `GAKURAN:STUDENT:${discordId}`;
+    const qrData = `${process.env.VERIFY_BASE_URL || 'http://localhost:3000'}/verify/${discordId}`;
     const qrBuffer = await QRCode.toBuffer(qrData, {
         type: 'png',
         width: 150,
