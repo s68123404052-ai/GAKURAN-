@@ -10,6 +10,7 @@ const {
 const challenge = require('../services/challenge.service');
 const match = require('../services/match.service');
 const scoreService = require('../services/score.service');
+const adminScore = require('../services/admin-score.service');
 const bonus = require('../services/bonus.service');
 const discordRole = require('../services/discord-role.service');
 const rewardCode = require('../services/reward-code.service');
@@ -212,6 +213,66 @@ const commands = [
         ),
 
     new SlashCommandBuilder()
+        .setName('add-score')
+        .setDescription('เพิ่มคะแนนให้ผู้เล่น (Admin)')
+        .addUserOption(o =>
+            o.setName('user')
+                .setDescription('ผู้เล่น')
+                .setRequired(true)
+        )
+        .addIntegerOption(o =>
+            o.setName('amount')
+                .setDescription('จำนวนคะแนนที่เพิ่ม')
+                .setMinValue(1)
+                .setRequired(true)
+        )
+        .addStringOption(o =>
+            o.setName('reason')
+                .setDescription('เหตุผล')
+                .setRequired(true)
+        ),
+
+    new SlashCommandBuilder()
+        .setName('remove-score')
+        .setDescription('หักคะแนนผู้เล่น (Admin)')
+        .addUserOption(o =>
+            o.setName('user')
+                .setDescription('ผู้เล่น')
+                .setRequired(true)
+        )
+        .addIntegerOption(o =>
+            o.setName('amount')
+                .setDescription('จำนวนคะแนนที่หัก')
+                .setMinValue(1)
+                .setRequired(true)
+        )
+        .addStringOption(o =>
+            o.setName('reason')
+                .setDescription('เหตุผล')
+                .setRequired(true)
+        ),
+
+    new SlashCommandBuilder()
+        .setName('set-score')
+        .setDescription('ตั้งคะแนนผู้เล่นโดยตรง (Admin)')
+        .addUserOption(o =>
+            o.setName('user')
+                .setDescription('ผู้เล่น')
+                .setRequired(true)
+        )
+        .addIntegerOption(o =>
+            o.setName('score')
+                .setDescription('คะแนนใหม่')
+                .setMinValue(50)
+                .setRequired(true)
+        )
+        .addStringOption(o =>
+            o.setName('reason')
+                .setDescription('เหตุผล')
+                .setRequired(true)
+        ),
+
+    new SlashCommandBuilder()
         .setName('codes')
         .setDescription('ดู Reward Codes ทั้งหมด (Admin)'),
 
@@ -395,6 +456,228 @@ client.on('interactionCreate', async interaction => {
                 `🤖 Bot: ${bots}\n` +
                 `❌ ล้มเหลว: ${failed}`
             );
+        }
+
+        if (cmd === 'set-score') {
+            if (!isAdmin(interaction)) {
+                return interaction.reply({
+                    embeds: [
+                        new EmbedBuilder()
+                            .setColor(0xFF1493)
+                            .setTitle('❌ ไม่มีสิทธิ์')
+                            .setDescription('คำสั่งนี้ใช้ได้เฉพาะผู้ดูแลเซิร์ฟเวอร์เท่านั้น')
+                    ],
+                    ephemeral: true
+                });
+            }
+
+            const target = interaction.options.getUser('user', true);
+            const score = interaction.options.getInteger('score', true);
+            const reason = interaction.options.getString('reason', true);
+
+            const result = adminScore.setScore({
+                playerId: target.id,
+                score,
+                reason,
+                adminId: interaction.user.id
+            });
+
+            let roleText = 'ไม่ได้ซิงค์ Role';
+
+            try {
+                const member = await interaction.guild.members.fetch(target.id);
+                const roleResult = await discordRole.syncRole(member, result.after);
+
+                roleText = roleResult.success
+                    ? 'อัปเดต Rank Role สำเร็จ'
+                    : 'อัปเดต Rank Role ไม่สำเร็จ';
+            } catch (roleError) {
+                console.error('SET SCORE ROLE SYNC ERROR:', roleError);
+                roleText = 'ไม่สามารถซิงค์ Rank Role ได้';
+            }
+
+            return interaction.reply({
+                embeds: [
+                    new EmbedBuilder()
+                        .setColor(0xFF69B4)
+                        .setTitle('🎯 ตั้งคะแนนสำเร็จ')
+                        .setDescription(`ตั้งคะแนนให้ <@${target.id}> เรียบร้อยแล้ว`)
+                        .addFields(
+                            {
+                                name: '📊 คะแนน',
+                                value: `**${result.before} → ${result.after}** (${result.change >= 0 ? '+' : ''}${result.change})`,
+                                inline: false
+                            },
+                            {
+                                name: '🏅 Rank',
+                                value: `**${scoreService.class0f(result.after)}**`,
+                                inline: true
+                            },
+                            {
+                                name: '📝 เหตุผล',
+                                value: result.reason,
+                                inline: true
+                            },
+                            {
+                                name: '🎖️ Role',
+                                value: roleText,
+                                inline: false
+                            }
+                        )
+                        .setFooter({ text: `GAKURAN • Admin Score • ${result.transactionId}` })
+                        .setTimestamp()
+                ],
+                ephemeral: true
+            });
+        }
+
+        if (cmd === 'remove-score') {
+            if (!isAdmin(interaction)) {
+                return interaction.reply({
+                    embeds: [
+                        new EmbedBuilder()
+                            .setColor(0xFF1493)
+                            .setTitle('❌ ไม่มีสิทธิ์')
+                            .setDescription('คำสั่งนี้ใช้ได้เฉพาะผู้ดูแลเซิร์ฟเวอร์เท่านั้น')
+                    ],
+                    ephemeral: true
+                });
+            }
+
+            const target = interaction.options.getUser('user', true);
+            const amount = interaction.options.getInteger('amount', true);
+            const reason = interaction.options.getString('reason', true);
+
+            const result = adminScore.changeScore({
+                playerId: target.id,
+                amount: -amount,
+                reason,
+                adminId: interaction.user.id
+            });
+
+            let roleText = 'ไม่ได้ซิงค์ Role';
+
+            try {
+                const member = await interaction.guild.members.fetch(target.id);
+                const roleResult = await discordRole.syncRole(member, result.after);
+                roleText = roleResult.success
+                    ? 'อัปเดต Rank Role สำเร็จ'
+                    : 'อัปเดต Rank Role ไม่สำเร็จ';
+            } catch (roleError) {
+                console.error('REMOVE SCORE ROLE SYNC ERROR:', roleError);
+                roleText = 'ไม่สามารถซิงค์ Rank Role ได้';
+            }
+
+            return interaction.reply({
+                embeds: [
+                    new EmbedBuilder()
+                        .setColor(0xFF69B4)
+                        .setTitle('📉 หักคะแนนสำเร็จ')
+                        .setDescription(`หักคะแนนจาก <@${target.id}> เรียบร้อยแล้ว`)
+                        .addFields(
+                            {
+                                name: '📊 คะแนน',
+                                value: `**${result.before} → ${result.after}** (${result.change})`,
+                                inline: false
+                            },
+                            {
+                                name: '🏅 Rank',
+                                value: `**${scoreService.class0f(result.after)}**`,
+                                inline: true
+                            },
+                            {
+                                name: '📝 เหตุผล',
+                                value: result.reason,
+                                inline: true
+                            },
+                            {
+                                name: '🎖️ Role',
+                                value: roleText,
+                                inline: false
+                            }
+                        )
+                        .setFooter({ text: `GAKURAN • Admin Score • ${result.transactionId}` })
+                        .setTimestamp()
+                ],
+                ephemeral: true
+            });
+        }
+
+        if (cmd === 'add-score') {
+            if (!isAdmin(interaction)) {
+                return interaction.reply({
+                    embeds: [
+                        new EmbedBuilder()
+                            .setColor(0xFF1493)
+                            .setTitle('❌ ไม่มีสิทธิ์')
+                            .setDescription('คำสั่งนี้ใช้ได้เฉพาะผู้ดูแลเซิร์ฟเวอร์เท่านั้น')
+                    ],
+                    ephemeral: true
+                });
+            }
+
+            const target = interaction.options.getUser('user', true);
+            const amount = interaction.options.getInteger('amount', true);
+            const reason = interaction.options.getString('reason', true);
+
+            try {
+                const result = adminScore.changeScore({
+                    playerId: target.id,
+                    amount,
+                    reason,
+                    adminId: interaction.user.id
+                });
+
+                let roleText = 'ไม่ได้ซิงค์ Role';
+
+                try {
+                    const member = await interaction.guild.members.fetch(target.id);
+                    const roleResult = await discordRole.syncRole(member, result.after);
+
+                    roleText = roleResult.success
+                        ? 'อัปเดต Rank Role สำเร็จ'
+                        : 'อัปเดต Rank Role ไม่สำเร็จ';
+                } catch (roleError) {
+                    console.error('ADD SCORE ROLE SYNC ERROR:', roleError);
+                    roleText = 'ไม่สามารถซิงค์ Rank Role ได้';
+                }
+
+                return interaction.reply({
+                    embeds: [
+                        new EmbedBuilder()
+                            .setColor(0xFF69B4)
+                            .setTitle('💰 เพิ่มคะแนนสำเร็จ')
+                            .setDescription(`เพิ่มคะแนนให้ <@${target.id}> เรียบร้อยแล้ว`)
+                            .addFields(
+                                {
+                                    name: '📊 คะแนน',
+                                    value: `**${result.before} → ${result.after}** (+${result.change})`,
+                                    inline: false
+                                },
+                                {
+                                    name: '🏅 Rank',
+                                    value: `**${scoreService.class0f(result.after)}**`,
+                                    inline: true
+                                },
+                                {
+                                    name: '📝 เหตุผล',
+                                    value: result.reason,
+                                    inline: true
+                                },
+                                {
+                                    name: '🎖️ Role',
+                                    value: roleText,
+                                    inline: false
+                                }
+                            )
+                            .setFooter({ text: `GAKURAN • Admin Score • ${result.transactionId}` })
+                            .setTimestamp()
+                    ],
+                    ephemeral: true
+                });
+            } catch (error) {
+                throw error;
+            }
         }
 
         if (cmd === 'create-code') {
