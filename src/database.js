@@ -76,6 +76,8 @@ CREATE TABLE IF NOT EXISTS matches (
  match_type TEXT NOT NULL DEFAULT 'RANKED',
  score_a_before INTEGER,
  score_b_before INTEGER,
+ score_a_after INTEGER,
+ score_b_after INTEGER,
  class_a_before TEXT,
  class_b_before TEXT,
  winner_id TEXT,
