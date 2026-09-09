@@ -1879,11 +1879,12 @@ return interaction.reply({
 
 if (cmd === 'challenge') {
   try {
+    await interaction.deferReply();
     const target = interaction.options.getUser('user');
     const reason = interaction.options.getString('reason') || null;
 
     if (target.id === interaction.user.id) {
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [
           new EmbedBuilder()
             .setColor(0xFF1493)
@@ -1933,14 +1934,14 @@ if (cmd === 'challenge') {
       })
       .setTimestamp();
 
-    return interaction.reply({
+    return interaction.editReply({
       embeds: [embed]
     });
 
   } catch (error) {
     console.error('CHALLENGE ERROR:', error);
 
-    return interaction.reply({
+    return interaction.editReply({
       embeds: [
         new EmbedBuilder()
           .setColor(0xFF1493)
